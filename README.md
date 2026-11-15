@@ -1,6 +1,6 @@
-Health, damage and hit registration for a Godot 4.7+ shooter. It gives you hitboxes, scatter that is the same everywhere, lag compensation, and a resolver that turns a shot into damage under one set of rules. A client can predict its own fire while the server stays the authority. Part of the [dot-*](https://github.com/modcommunity) family.
+Health, damage and hit registration for a Godot 4.7+ shooter. It gives you hitboxes, scatter that is the same everywhere, lag compensation, and a resolver that turns a shot into damage under one set of rules. A client can predict its own fire while the server stays the authority. Part of the [dot-*](https://github.com/gamespice-platform) family.
 
-It needs [dot-core](https://github.com/modcommunity/dot-core). It works with dot-net, [dot-weapon](https://github.com/modcommunity/dot-weapon) and dot-player-controller without importing any of them. It does not know what a weapon is: a `DotShot` describes itself (damage, range, splash), so a rifle, a bow, a thrown charge, a trap or a hazard all produce one the same way.
+It needs [dot-core](https://github.com/gamespice-platform/core). It works with dot-net, [dot-weapon](https://github.com/gamespice-platform/weapon) and dot-player-controller without importing any of them. It does not know what a weapon is: a `DotShot` describes itself (damage, range, splash), so a rifle, a bow, a thrown charge, a trap or a hazard all produce one the same way.
 
 ## Install
 
