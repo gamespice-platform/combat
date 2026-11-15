@@ -170,6 +170,13 @@ func _test_trace_prefilter() -> void:
 	_check(ray_diff == 0, "%d random rays return exactly what the unfiltered walk returned" % trials, "%d differ" % ray_diff)
 	_check(ray_hits > 100 and ray_walls > 20 and ray_hits - ray_walls > 30, "and the rays cover bodies and walls", "%d hits, %d walls" % [ray_hits, ray_walls])
 
+	_prefilter_pass_through(manager, rules, rng, trials)
+
+	_done()
+
+
+## pass_through_sets at levels 0, 1 and 2, and with a pass_through_fn, against the unfiltered walk.
+func _prefilter_pass_through(manager: DotCombatManager, rules: DotDamageRules, rng: RandomNumberGenerator, trials: int) -> void:
 	var levels_diff := [0, 0, 0]
 	var nonempty := 0
 
@@ -202,5 +209,3 @@ func _test_trace_prefilter() -> void:
 			fn_diff += 1
 	manager.pass_through_fn = Callable()
 	_check(fn_diff == 0, "and with a pass_through_fn in place of the team rule", "%d differ" % fn_diff)
-
-	_done()
