@@ -24,13 +24,18 @@ extends DotCombatBase
 ## manager.resolve_shot(shot, client_view_tick)
 ## [/codeblock]
 
-var _tracer: DotPelletTracer = null
-var _cvars: DotCombatCvars = null
+# Loaded by uid, not named: the tracer and the cvars name this class back, and a script loop
+# keeps every script in it in memory for good (Godot 4.7).
+const _TRACER_UID := "uid://cbebxr4alar6d"
+const _CVARS_UID := "uid://dk1khpgu3sovl"
+
+var _tracer: RefCounted = null
+var _cvars: RefCounted = null
 
 
 func _init() -> void:
-	_tracer = DotPelletTracer.new(self)
-	_cvars = DotCombatCvars.new(self)
+	_tracer = load(_TRACER_UID).new(self)
+	_cvars = load(_CVARS_UID).new(self)
 
 
 func _ready() -> void:
