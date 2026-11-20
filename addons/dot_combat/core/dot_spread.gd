@@ -20,7 +20,7 @@ extends RefCounted
 ## making for the one place in a shooter where a mismatch is invisible until someone
 ## complains that a weapon "feels off".
 ##
-## [b]The mixing itself is dot-core's.[/b] This file used to carry its own splitmix64,
+## [b]The mixing itself is GameSpice Core's.[/b] This file used to carry its own splitmix64,
 ## with every published constant's top bit cleared so GDScript would parse it as an
 ## [int] rather than a float -- a mixer that still mixed but was no longer the
 ## algorithm it named. [DotRandomStream] writes those constants once, as their signed
@@ -32,7 +32,7 @@ extends RefCounted
 ## Kept as a named entry point on [DotSpread] rather than having callers reach for
 ## [DotRandomStream] directly: what a weapon wants is "the scatter for this pellet of
 ## this shot", and the four arguments in this order are that question. The mixing is
-## dot-core's -- see [method DotRandomStream.mix4].
+## GameSpice Core's -- see [method DotRandomStream.mix4].
 static func hash4(a: int, b: int, c: int, d: int) -> int:
 	return DotRandomStream.mix4(a, b, c, d)
 

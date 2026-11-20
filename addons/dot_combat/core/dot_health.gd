@@ -4,12 +4,12 @@ extends Node
 
 ## Health, armour and being alive. The node every damageable thing has one of.
 ##
-## [b]This is a plain [Node], not a [code]DotNetBehaviour[/code].[/b] Only dot-core is
+## [b]This is a plain [Node], not a [code]DotNetBehaviour[/code].[/b] Only GameSpice Core is
 ## a hard dependency in this family, and a script that so much as [i]mentions[/i] a
 ## [code]class_name[/code] the project does not have fails to parse — taking every
 ## script that references it down with it. So the numbers live here and
 ## [DotCombatNetSync] describes how to replicate them, without either file naming
-## dot-net. See this project's docs/design.md for the bridge.
+## GameSpice Net. See this project's docs/design.md for the bridge.
 ##
 ## [b]Applying damage is deterministic and takes no wall-clock time.[/b] Regeneration
 ## and invulnerability are counted in ticks, not seconds, because a predicted client

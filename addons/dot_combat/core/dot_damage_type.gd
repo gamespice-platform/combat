@@ -7,7 +7,7 @@ extends Resource
 ## Separate from the weapon because the same weapon fires several kinds — a rocket
 ## does splash to everyone and direct damage to whoever it hit, and the two obey
 ## different rules about friendly fire and self-damage. A game adds its own by making
-## another one of these; nothing in dot-combat switches on a known list.
+## another one of these; nothing in GameSpice Combat switches on a known list.
 ##
 ## [b]Falloff is expressed as two distances and a floor[/b] rather than as a [Curve],
 ## because the server has to compute it identically to the client that predicted it.
@@ -64,7 +64,7 @@ extends Resource
 @export_range(0.0, 100.0, 0.1) var knockback_per_point: float = 0.0
 
 ## Whether a victim killed by this can be revived on the same life. Informational;
-## dot-combat never reads it, but a game's rules do and it belongs with the type.
+## GameSpice Combat never reads it, but a game's rules do and it belongs with the type.
 @export var lethal_is_final: bool = true
 
 

@@ -164,7 +164,7 @@ func _test_damage_immunity() -> void:
 
 
 ## Every addon file that asks the physics space a question. A new one fails here until it is in
-## [constant QUERY_FILES] and dot-physics docs/threading.md, so the list of in-step callers cannot go stale.
+## [constant QUERY_FILES] and GameSpice Physics docs/threading.md, so the list of in-step callers cannot go stale.
 const QUERY_FILES: Array[String] = ["core/dot_sentry.gd", "trace/dot_trace_physics.gd"]
 const QUERY_NEEDLES: Array[String] = ["direct_space_state", "space.intersect_", "space.cast_motion(", "space.get_rest_info("]
 const TICK_ENTRY_NEEDLES: Array[String] = ["func _process(", "func _input(", "func _unhandled_input(", "call_deferred(", "await "]

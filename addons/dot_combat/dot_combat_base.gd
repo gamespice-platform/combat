@@ -66,7 +66,7 @@ var trace: DotTrace = null
 var limb_min_damage: Dictionary = {}
 
 ## Optional `func(entity: Node) -> Object`. When it returns an object with `hit(point, amount, impulse)`
-## (dot-npc's `DotNpcLimbs`), a qualifying limb hit calls it: duck-typed, so neither addon imports the other.
+## (GameSpice NPC's `DotNpcLimbs`), a qualifying limb hit calls it: duck-typed, so neither addon imports the other.
 var limb_target_fn: Callable = Callable()
 
 ## Turns hits into numbers. Built from [member rules] at setup if left null.
@@ -76,7 +76,7 @@ var resolver: DotDamageResolver = null
 var damage_types: Dictionary = {}
 
 ## Rewinds the world to a tick: [code]func(tick: float) -> int[/code]. Unset, shots resolve
-## against the present; dot-net is not named here (bridge in docs/design.md).
+## against the present; GameSpice Net is not named here (bridge in docs/design.md).
 var rewind_fn: Callable = Callable()
 
 ## Undoes the most recent rewind: [code]func() -> int[/code]. Must be set whenever

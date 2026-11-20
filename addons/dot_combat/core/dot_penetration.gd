@@ -2,7 +2,7 @@ class_name DotPenetration
 extends RefCounted
 
 ## What one round can pass through: a power in metres of reference material, a resistance per surface material, a
-## power cost per body. A [DotShot] carries it, so the manager reads nothing off a weapon; dot-weapon builds it from an ammo profile.
+## power cost per body. A [DotShot] carries it, so the manager reads nothing off a weapon; GameSpice Weapon builds it from an ammo profile.
 
 ## Skull and neck are dense: a head hit costs several times the power of a chest hit, so a rifle round that crosses a torso stops in a head.
 const DEFAULT_BODY_ZONES := {&"head": 8.0, &"neck": 3.0}

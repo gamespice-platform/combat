@@ -655,7 +655,7 @@ func _lag_refused_shots_restore(manager: DotCombatManager, rewinds: Array[float]
 	_done()
 
 
-## A stand-in for the DotNetBehaviour a game writes: plain properties, so dot-combat names no dot-net type.
+## A stand-in for the DotNetBehaviour a game writes: plain properties, so GameSpice Combat names no GameSpice Net type.
 class FakeBehaviour extends Object:
 	var net_health: int = 0
 	var net_armour: int = 0
@@ -666,7 +666,7 @@ func _test_net_sync() -> void:
 	_section("net sync")
 
 	var specs := DotCombatNetSync.specs()
-	# Three, not six: the slot, the magazine and the reserve moved to dot-weapon's own
+	# Three, not six: the slot, the magazine and the reserve moved to GameSpice Weapon's own
 	# sync when the weapon layer left this addon. A game with health and no weapons
 	# replicates three properties rather than six.
 	_check(specs.size() == 3, "the bridge describes every replicated health property")

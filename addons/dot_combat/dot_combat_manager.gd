@@ -2,7 +2,7 @@
 class_name DotCombatManager
 extends DotCombatBase
 
-## Resolves shots into damage. The server-side half of dot-combat.
+## Resolves shots into damage. The server-side half of GameSpice Combat.
 ##
 ## The shooter runs on both ends and this only where the game is authoritative, so a client
 ## can predict its own fire without ever deciding who dies.
@@ -368,8 +368,8 @@ func cvar_specs() -> Array[Dictionary]:
 ## unloads) or anything with its signature: `(name, default, description, flags) -> cvar`.
 ## Returns the cvars it made.
 ##
-## [b]Duck-typed, because dot-server is not a dependency of this addon[/b]; the same shape
-## as dot-npc-ai's `DotNpcAiSkill.bind_cvars`. A cvar needs a `changed(old, new)` signal and
+## [b]Duck-typed, because GameSpice Server is not a dependency of this addon[/b]; the same shape
+## as GameSpice NPC AI's `DotNpcAiSkill.bind_cvars`. A cvar needs a `changed(old, new)` signal and
 ## a `get_string()`; a range is used when it offers one.
 ##
 ## [b]Live:[/b] a change writes through to [member rules], which the resolver shares, so the
@@ -377,7 +377,7 @@ func cvar_specs() -> Array[Dictionary]:
 ## cvar set before this ran (argv, a config executed early, the deploy's content.yml) already
 ## holds the operator's value.
 ##
-## [b]Pass dot-server's FLAG_REPLICATED in [param flags][/b], and have each client's manager
+## [b]Pass GameSpice Server's FLAG_REPLICATED in [param flags][/b], and have each client's manager
 ## [method follow_cvars] its link: the value then reaches every client, which predicts its
 ## tracers and impacts under the server's rule rather than its own default.
 func bind_cvars(add: Callable, flags: int = 0) -> Array:
@@ -419,7 +419,7 @@ func _on_cvar_changed(_old: String, new_value: String, cvar_name: String) -> voi
 
 
 ## Keeps a client's [member rules] on the server's values of [method cvar_specs]' cvars, as
-## [param source] reports them: dot-server's `DotClientLink`, or anything with a
+## [param source] reports them: GameSpice Server's `DotClientLink`, or anything with a
 ## `replicated_cvar(name, fallback) -> String` and a `replicated_cvar_changed(name, value)`
 ## signal. Applies what the source already holds, then every change. True when it is
 ## following.
@@ -430,7 +430,7 @@ func _on_cvar_changed(_old: String, new_value: String, cvar_name: String) -> voi
 ## went through, or went through one the server's shot hit: every shot near a friend drew
 ## somewhere it did not land.
 ##
-## [b]Duck-typed, like [method bind_cvars][/b]: this addon names nothing outside dot-core. A
+## [b]Duck-typed, like [method bind_cvars][/b]: this addon names nothing outside GameSpice Core. A
 ## source without the method or the signal (an older shell's link) is refused and the
 ## manager keeps its default, which is what every client did before. Calling it again with
 ## the same source is harmless; a manager rebuilt with the world needs it called again.

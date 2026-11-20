@@ -1,7 +1,7 @@
 @tool
 extends EditorPlugin
 
-## Editor entry point for dot-combat. Registers inspector types only.
+## Editor entry point for GameSpice Combat. Registers inspector types only.
 ##
 ## No autoload, for the family's reason: a process may run a server and a client at
 ## once, and a singleton combat manager makes that impossible. [DotCombatManager]

@@ -4,21 +4,21 @@ extends RefCounted
 ## What a networked fighter has to replicate of its [DotHealth], and how to move it in
 ## and out.
 ##
-## [b]Health only.[/b] Until dot-weapon existed this also carried the slot, the
-## magazine and the reserve, which made dot-combat's wire format describe a thing
-## dot-combat no longer owns. The weapon half is now `DotWeaponNetSync` in dot-weapon,
+## [b]Health only.[/b] Until GameSpice Weapon existed this also carried the slot, the
+## magazine and the reserve, which made GameSpice Combat's wire format describe a thing
+## GameSpice Combat no longer owns. The weapon half is now `DotWeaponNetSync` in GameSpice Weapon,
 ## and a game that uses both concatenates the two spec lists. A game with health and no
 ## weapons — which is most co-operative and survival games before their first weapon —
 ## now replicates three properties instead of six.
 ##
-## [b]dot-net is not a dependency and is not imported here.[/b] Only dot-core is a hard
+## [b]GameSpice Net is not a dependency and is not imported here.[/b] Only GameSpice Core is a hard
 ## dependency in this family, and in GDScript that is not merely a preference: a script
 ## that [i]mentions[/i] a [code]class_name[/code] the project does not have fails to
 ## parse, and takes every script that references it down with it. The same reason
 ## [code]DotTransportENet[/code] reaches ENet through [method ClassDB.instantiate]
 ## rather than by name.
 ##
-## So dot-combat compiles and runs with dot-core alone, and the bridge that joins the
+## So GameSpice Combat compiles and runs with GameSpice Core alone, and the bridge that joins the
 ## two lives in the host game. This class is everything that bridge would otherwise
 ## have to work out for itself.
 ##
@@ -129,7 +129,7 @@ static func pull(health: DotHealth, target: Object) -> void:
 ## Copies received state back into the simulation, on a peer that is not authoritative.
 ##
 ## Health is written straight through: it is the server's alone, so the received value
-## is the truth. Ammunition is not like that, which is why it lives in dot-weapon's
+## is the truth. Ammunition is not like that, which is why it lives in GameSpice Weapon's
 ## sync and is corrected rather than overwritten.
 static func push(source: Object, health: DotHealth) -> void:
 	if source == null or health == null:

@@ -1,10 +1,10 @@
-# dot-combat
+# GameSpice Combat
 
-Health, damage and hit registration: analytic hitboxes, deterministic spread, lag compensation, and a resolver that turns a `DotShot` into damage under one set of rules. Weapons are dot-weapon's; this addon does not know what a weapon is.
+Health, damage and hit registration: analytic hitboxes, deterministic spread, lag compensation, and a resolver that turns a `DotShot` into damage under one set of rules. Weapons are GameSpice Weapon's; this addon does not know what a weapon is.
 
 Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is specific to combat.
 
-**The distributable is `addons/dot_combat/`.** It requires [dot-core](../dot-core) and nothing else (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, gitignored). It works with dot-net, dot-weapon and dot-player-controller without naming any of their classes.
+**The distributable is `addons/dot_combat/`.** It requires [GameSpice Core](../dot-core) and nothing else (`ln -s ../../dot-core/addons/dot_core addons/dot_core`, gitignored). It works with dot-net, dot-weapon and dot-player-controller without naming any of their classes.
 
 ## Read before
 
@@ -21,7 +21,7 @@ Read the family [CLAUDE.md](../../CLAUDE.md) first; this file is only what is sp
 | `core/dot_sentry.gd` | `DotSentry`: a deployed turret as data; `step(delta, now, candidates, can_see)` says when and where it fires, `find_spot` is the placement check (floor, slope, headroom, room); the game applies damage and draws it |
 | `core/dot_fall_damage.gd`, `dot_fall_damage_rules.gd` | `DotFallDamage` (per player: a controller's `landed(impact)` becomes `apply_damage`, authority only) and `DotFallDamageRules` (`sv_falldamage`, `_threshold`, `_scale`; off by default; water and soft surfaces ignored) |
 | `core/dot_defib.gd` | `DotDefib`: a defibrillator as data (charges, cooldown, reach, charge time, revive share, body-age limit); `check(now, body_age, distance)` says why a try refuses, the game owns the hold, the body and the revive |
-| `core/dot_spread.gd` | `DotSpread`: deterministic scatter over dot-core's `DotRandomStream` |
+| `core/dot_spread.gd` | `DotSpread`: deterministic scatter over GameSpice Core's `DotRandomStream` |
 | `core/dot_hitzone.gd` | `DotHitzone`: fine zones (neck, hand, foot beside head, chest, stomach, arm, leg), `coarse()` fold-back, left/middle/right `side_of`; `mp_hitzones` (default 0) decides whether the fine ones carry their own multiplier; multipliers from `hit_groups:` in `cfg/addons/dot-combat/*.yml` |
 | `core/dot_hitbox.gd`, `dot_hitbox_set.gd`, `dot_hit_group.gd` | analytic capsule, box and sphere hitboxes; tie-break by precedence; `DotHitGroup.bind_cvars(add, prefix, flags)` makes the server cvars `<prefix>_head_mult`, `_neck_`, `_stomach_`, `_leg_` |
 | `core/dot_stomp.gd`, `dot_stomp_rules.gd` | `DotStomp` (pure head-landing detector: fall speed, head gap, reach, cooldown, team) and `DotStompRules` (`sv_stomp*` cvars; off by default; the game applies the damage and bounce, with `context.ignores_teams` for same-team) |
@@ -56,8 +56,8 @@ The family's two steps ([family CLAUDE.md](../../CLAUDE.md#validating-anything))
 - register_hitboxes/register_health ignore entity id 0 or a null node with a warning and count it (describe()["registrations_refused"]); register after the entity has its network id.
 - Team 0 is "no team" in `_same_team`, or a free-for-all with friendly fire off has nobody able to hurt anybody. [design](docs/design.md#zero-is-not-a-team)
 - Critical defaults change no number; the roll is a hash of the hit, not a stream. [design](docs/design.md#a-critical-is-a-flag-before-it-is-a-number)
-- A hitbox's `limb` tag (not `group`, which is about damage) resolves a hit to limb, world point and impulse: `DotCombatManager.limb_hit`, or `limb_target_fn(entity) -> Object` whose `hit(point, amount, impulse)` is called (dot-npc's `DotNpcLimbs`, duck-typed; never import it). `limb_min_damage` (`cfg/addons/dot-combat/*.yml`, per limb or `default`) is the least resolved damage that counts. [design](docs/design.md#limbs)
-- Health replicates as integers; ammunition is dot-weapon's `DotWeaponNetSync`, not here. [design](docs/design.md#wire-form)
-- Name no class outside dot-core; net types are strings resolved by the game's bridge. [design](docs/design.md#coupling-nothing-is-imported)
+- A hitbox's `limb` tag (not `group`, which is about damage) resolves a hit to limb, world point and impulse: `DotCombatManager.limb_hit`, or `limb_target_fn(entity) -> Object` whose `hit(point, amount, impulse)` is called (GameSpice NPC's `DotNpcLimbs`, duck-typed; never import it). `limb_min_damage` (`cfg/addons/dot-combat/*.yml`, per limb or `default`) is the least resolved damage that counts. [design](docs/design.md#limbs)
+- Health replicates as integers; ammunition is GameSpice Weapon's `DotWeaponNetSync`, not here. [design](docs/design.md#wire-form)
+- Name no class outside GameSpice Core; net types are strings resolved by the game's bridge. [design](docs/design.md#coupling-nothing-is-imported)
 
 Deliberately not here: projectiles as entities, anything about what a player holds, ballistics, presentation, ammunition pickups, damage over time. [design](docs/design.md#deliberately-not-here)

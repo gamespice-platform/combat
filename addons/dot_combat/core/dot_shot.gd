@@ -3,7 +3,7 @@ extends RefCounted
 
 ## One thing that was fired and now has to be resolved against the world.
 ##
-## [b]It describes itself rather than pointing at a weapon.[/b] Until dot-weapon
+## [b]It describes itself rather than pointing at a weapon.[/b] Until GameSpice Weapon
 ## existed this held a `DotWeapon` and the manager read `weapon.damage`,
 ## `weapon.max_range` and `weapon.delivery` off it, which quietly made "what can be
 ## resolved" the same question as "what that one resource can describe": a bow, a
@@ -11,7 +11,7 @@ extends RefCounted
 ## to be a gun. Copying the six numbers the resolver actually needs onto the shot costs
 ## a few bytes and buys a combat layer that resolves anything.
 ##
-## So dot-combat now knows nothing about weapons at all. dot-weapon fills one of these
+## So GameSpice Combat now knows nothing about weapons at all. GameSpice Weapon fills one of these
 ## in; so can a trap, a turret, an environmental hazard or a script with no weapon
 ## anywhere near it.
 ##

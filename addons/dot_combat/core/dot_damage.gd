@@ -10,7 +10,7 @@ extends RefCounted
 ## A rules hook that wants to change the outcome writes to [member amount] or sets
 ## [member refused]; nothing downstream re-derives it.
 
-## Who caused it. A game's own id space — dot-combat never interprets these beyond
+## Who caused it. A game's own id space — GameSpice Combat never interprets these beyond
 ## comparing them, so a peer id, a session id or a user id all work as long as one
 ## kind is used throughout.
 var attacker: int = 0

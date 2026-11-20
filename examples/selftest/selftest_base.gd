@@ -1,6 +1,6 @@
 extends Node
 
-## The harness every dot-combat self-test section runs on: counters, assertions, fixtures.
+## The harness every GameSpice Combat self-test section runs on: counters, assertions, fixtures.
 
 var _passed := 0
 var _failed := 0
@@ -8,7 +8,7 @@ var _failures := PackedStringArray()
 var _entered := 0
 var _completed := 0
 
-## A stand-in for dot-server's DotConVar, which this addon may not name: what
+## A stand-in for GameSpice Server's DotConVar, which this addon may not name: what
 ## [method DotCombatManager.bind_cvars] duck-types (a `changed` signal, `get_string`,
 ## `with_range`), holding a value an operator set before the manager bound it.
 class FakeCvar extends RefCounted:
@@ -33,7 +33,7 @@ class FakeCvar extends RefCounted:
 		changed.emit(old, text)
 
 
-## Stands in for dot-server's DotClientLink: the two members follow_cvars asks for.
+## Stands in for GameSpice Server's DotClientLink: the two members follow_cvars asks for.
 class FakeLink extends Node:
 	signal replicated_cvar_changed(cvar_name: String, value: String)
 	var replicated_cvars := {}

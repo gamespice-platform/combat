@@ -1,8 +1,8 @@
 [![Combat - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/25-gs-combat)
 
-Health, damage and hit registration for a Godot 4.7+ shooter. It gives you hitboxes, scatter that is the same everywhere, lag compensation, and a resolver that turns a shot into damage under one set of rules. A client can predict its own fire while the server stays the authority. Part of the [dot-*](https://github.com/gamespice-platform) family.
+Health, damage and hit registration for a Godot 4.7+ shooter. It gives you hitboxes, scatter that is the same everywhere, lag compensation, and a resolver that turns a shot into damage under one set of rules. A client can predict its own fire while the server stays the authority. Part of the [GameSpice](https://github.com/gamespice-platform) family.
 
-It needs [dot-core](https://github.com/gamespice-platform/core). It works with dot-net, [dot-weapon](https://github.com/gamespice-platform/weapon) and dot-player-controller without importing any of them. It does not know what a weapon is: a `DotShot` describes itself (damage, range, splash), so a rifle, a bow, a thrown charge, a trap or a hazard all produce one the same way.
+It needs [GameSpice Core](https://github.com/gamespice-platform/core). It works with GameSpice Net, [GameSpice Weapon](https://github.com/gamespice-platform/weapon) and GameSpice Player Controller without importing any of them. It does not know what a weapon is: a `DotShot` describes itself (damage, range, splash), so a rifle, a bow, a thrown charge, a trap or a hazard all produce one the same way.
 
 ## Install
 
@@ -50,7 +50,7 @@ Something else decides that a shot happened. dot-combat decides what it hit. `re
 | `DotSpread` | Deterministic scatter, the reason prediction works. |
 | `DotDamageRules`, `DotDamageResolver` | Friendly fire, self damage, hit groups, criticals, falloff and clamping, in one order. |
 | `DotCombatManager` | Tracing, lag compensation, damage, kill reporting. |
-| `DotCombatNetSync` | What to replicate, without naming a dot-net type. |
+| `DotCombatNetSync` | What to replicate, without naming a GameSpice Net type. |
 
 ## Three failures it is built around
 
@@ -62,7 +62,7 @@ Something else decides that a shot happened. dot-combat decides what it hit. `re
 
 ## Lag compensation
 
-dot-combat does not name dot-net. Two callables turn compensation on:
+GameSpice Combat does not name GameSpice Net. Two callables turn compensation on:
 
 ```gdscript
 combat.rewind_fn = func(view_tick: float) -> void:

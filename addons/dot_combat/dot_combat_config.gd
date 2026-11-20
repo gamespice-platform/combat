@@ -8,7 +8,7 @@ extends DotConfig
 
 @export_group("Simulation")
 
-## Must match the rate the netcode runs at, and the rate dot-weapon's arsenals are
+## Must match the rate the netcode runs at, and the rate GameSpice Weapon's arsenals are
 ## built against. Every tick count here (rewind window, rate limits) is converted
 ## against it, so a mismatch skews them — and the symptom is "the hits feel wrong",
 ## not an error.

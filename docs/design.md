@@ -6,7 +6,7 @@ Why dot-combat is shaped the way it is, and why the obvious alternative is wrong
 
 **Deciding that a shot happened and deciding what it hit are two different jobs, and they run in different places.**
 
-Whatever produces the shot does the first; in the games here that is dot-weapon. It runs on the owning client *and* on the server, and both reach the same `DotShot`.
+Whatever produces the shot does the first; in the games here that is GameSpice Weapon. It runs on the owning client *and* on the server, and both reach the same `DotShot`.
 
 `DotCombatManager` does the second. It traces, it rewinds, it applies damage, and it applies damage only where `is_authority` is true. A client instance still traces, for hit markers and impact effects, but never touches a `DotHealth`.
 
@@ -16,13 +16,13 @@ Collapsing the two is the obvious simplification and it is wrong in a specific w
 
 It used to hold a `DotWeapon`, and the manager read `weapon.damage`, `weapon.max_range` and `weapon.delivery` off it. That quietly made "what can be resolved" the same question as "what that one resource can describe": a bow, a thrown charge and a game's own weapon had no way to produce one without pretending to be a gun. A few numbers on the shot (damage, type, range, pellets, splash) cost a few bytes and buy a combat layer that resolves anything, including a trap, a turret or a falling rock. Damage that comes from no shot at all goes through `apply_damage`.
 
-A shot with `deferred = true` is an entity with a lifetime and is not resolved here: `_trace_shot` records each pellet's endpoint so a caller can launch along the right vector, and the shot does no damage of its own. dot-weapon's projectile behaviours produce a `DotWeaponSpawn` instead of a shot; compensating a thing that arrives 400 ms later is a different problem from compensating hitscan, and by the time it lands everybody already agrees where everybody is.
+A shot with `deferred = true` is an entity with a lifetime and is not resolved here: `_trace_shot` records each pellet's endpoint so a caller can launch along the right vector, and the shot does no damage of its own. GameSpice Weapon's projectile behaviours produce a `DotWeaponSpawn` instead of a shot; compensating a thing that arrives 400 ms later is a different problem from compensating hitscan, and by the time it lands everybody already agrees where everybody is.
 
 ## Spread cannot come from a random number generator
 
 A predicted shot is simulated at least twice (once on the firing client, once on the server) and once more for every reconciliation replay after a correction. Anything drawing from a stream (`RandomNumberGenerator`, `randf()`, a seeded generator whose state advances) produces a different pattern on each run. The client sees pellets go one way and the server resolves them going another. Nothing errors; the symptom is a shotgun that visibly hits and does nothing, reported as "hit registration feels bad".
 
-So the pattern is a pure function of `(shooter, tick, shot index, pellet index)`, computed with integer arithmetic. Same inputs, same pattern, on every machine and every replay. `DotSpread.hash4` and `DotSpread.unit` are thin names over dot-core's `DotRandomStream.mix4` and `unit_from`: two implementations of one mixer is one too many when the point is that two machines agree. The float comes from the top 24 bits through a zero-filling shift, because the low bits of a multiply-based mixer are the least mixed and an arithmetic shift of a negative value keeps the sign bits.
+So the pattern is a pure function of `(shooter, tick, shot index, pellet index)`, computed with integer arithmetic. Same inputs, same pattern, on every machine and every replay. `DotSpread.hash4` and `DotSpread.unit` are thin names over GameSpice Core's `DotRandomStream.mix4` and `unit_from`: two implementations of one mixer is one too many when the point is that two machines agree. The float comes from the top 24 bits through a zero-filling shift, because the low bits of a multiply-based mixer are the least mixed and an arithmetic shift of a negative value keeps the sign bits.
 
 The offset is uniform over the cone's solid angle, not its radius: sampling the radius uniformly clusters pellets in the middle. `fixed_cone` replaces the pattern wholesale for a game that wants a fixed one.
 
@@ -34,7 +34,7 @@ Lag compensation rewinds the world, tests one ray and puts it back, per shot, pe
 
 So a `DotHitbox` is a capsule, box or sphere with a transform, and the intersection is arithmetic: free, exact, and the same answer on a predicting client and a re-running server. World geometry still goes through the physics server, once, via `DotTracePhysics`. **World geometry is the physics engine's business; entity hitboxes are ours.**
 
-`DotTraceFlat` (analytic boxes and a ground plane) is not a toy. A headless server, a self-test and a deterministic replay all need to trace against a world without a populated physics space. It plays the role `DotFpsFlatBody` plays in dot-player-controller, and the whole self-test runs against one.
+`DotTraceFlat` (analytic boxes and a ground plane) is not a toy. A headless server, a self-test and a deterministic replay all need to trace against a world without a populated physics space. It plays the role `DotFpsFlatBody` plays in GameSpice Player Controller, and the whole self-test runs against one.
 
 ## Ties
 
@@ -60,12 +60,12 @@ It lives in the manager because that is the only place that holds the attacker, 
 
 ### The operator decides: `mp_teammate_passthrough`
 
-Whether shots go through team-mates is a server's choice, not only a game author's, so the manager owns one server cvar, `mp_teammate_passthrough`, and every game with teams binds it with one line on its authoritative manager: `combat.bind_cvars(add_cvar, flags)` from its server module (the same duck-typed shape as dot-npc-ai's `DotNpcAiSkill.bind_cvars`, because dot-server is not a dependency). `0` team-mates are hit and block like anybody (the behaviour before the muzzle rule), `1` a shot passes through a team-mate holding the muzzle (the default), `2` shots pass through every team-mate in the line (`DotDamageRules.pass_through_team_mates`, off by default). The levels map onto the two rule flags through `DotDamageRules.set_pass_through_level`.
+Whether shots go through team-mates is a server's choice, not only a game author's, so the manager owns one server cvar, `mp_teammate_passthrough`, and every game with teams binds it with one line on its authoritative manager: `combat.bind_cvars(add_cvar, flags)` from its server module (the same duck-typed shape as GameSpice NPC AI's `DotNpcAiSkill.bind_cvars`, because GameSpice Server is not a dependency). `0` team-mates are hit and block like anybody (the behaviour before the muzzle rule), `1` a shot passes through a team-mate holding the muzzle (the default), `2` shots pass through every team-mate in the line (`DotDamageRules.pass_through_team_mates`, off by default). The levels map onto the two rule flags through `DotDamageRules.set_pass_through_level`.
 
 - **Live.** A change writes through to `rules`, which the resolver shares, so the next shot uses it; a value set before binding (argv, a config, the deploy's `content.yml`) is read back when it binds.
 - **Rays only.** Level 2 leaves splash alone: an explosion still reaches team-mates under `friendly_fire`. With friendly fire on, level 2 means a team-mate is only ever hurt by splash, which is what an operator who picks it asked for.
 - **`pass_through_fn` replaces the muzzle question only**; level 2 still lets every team-mate through, because an operator who set it meant every team-mate.
-- **Clients follow it.** A client traces its own shots for tracers, impacts and hit markers, so a client on the default 1 against a server on 0 or 2 drew shots stopping in, or passing through, a team-mate where the server's did the opposite. The game binds the cvar with dot-server's `FLAG_REPLICATED`, dot-server sends every replicated cvar to each client before it loads and every change afterwards (`DotEnvelope.CVARS`), and the client's manager calls `follow_cvars(link)` on its `DotClientLink` (duck-typed: `replicated_cvar()` and `replicated_cvar_changed`). A manager rebuilt with the world follows again. An older link without the method is refused and the manager keeps its default, which only costs the cosmetic mismatch.
+- **Clients follow it.** A client traces its own shots for tracers, impacts and hit markers, so a client on the default 1 against a server on 0 or 2 drew shots stopping in, or passing through, a team-mate where the server's did the opposite. The game binds the cvar with GameSpice Server's `FLAG_REPLICATED`, GameSpice Server sends every replicated cvar to each client before it loads and every change afterwards (`DotEnvelope.CVARS`), and the client's manager calls `follow_cvars(link)` on its `DotClientLink` (duck-typed: `replicated_cvar()` and `replicated_cvar_changed`). A manager rebuilt with the world follows again. An older link without the method is refused and the manager keeps its default, which only costs the cosmetic mismatch.
 
 ## Zero is not a team
 
@@ -83,24 +83,24 @@ Whether shots go through team-mates is a server's choice, not only a game author
 
 dot-combat names no class outside dot-core: not dot-net, dot-weapon, dot-player-controller or dot-server. A script that *mentions* a missing `class_name` fails to parse and takes every script referencing it down with it (the same reason `DotWeaponCommand.write` / `read` in dot-weapon take `Variant`).
 
-- `DotCombatNetSync` describes what to replicate as data, with type names as strings (`"UINT"`, `"BOOL"`), which a bridge resolves with `DotNetVar.Type[spec.type]`. The ~30-line `DotNetBehaviour` that joins it to dot-net belongs in the game; the worked example is in `DotCombatNetSync`'s class documentation.
+- `DotCombatNetSync` describes what to replicate as data, with type names as strings (`"UINT"`, `"BOOL"`), which a bridge resolves with `DotNetVar.Type[spec.type]`. The ~30-line `DotNetBehaviour` that joins it to GameSpice Net belongs in the game; the worked example is in `DotCombatNetSync`'s class documentation.
 - Lag compensation is two `Callable`s.
-- Movement state is pushed into dot-weapon's `DotWeaponContext` by the host rather than read out of a controller. An interpolated position differs between client and server by design, and feeding it to the spread would make the spread differ too.
+- Movement state is pushed into GameSpice Weapon's `DotWeaponContext` by the host rather than read out of a controller. An interpolated position differs between client and server by design, and feeding it to the spread would make the spread differ too.
 
 ## Deliberately not here
 
-- **Projectiles as entities.** A projectile is a replicated entity with a lifetime: dot-net's to carry, dot-weapon's (`DotWeaponProjectile`, `DotWeaponSpawn`) and the game's to model.
-- **Anything about what a player holds.** Rate of fire, magazines, reloading, switching, recoil and melee arcs are dot-weapon's; a `DotShot` is the seam.
+- **Projectiles as entities.** A projectile is a replicated entity with a lifetime: GameSpice Net's to carry, GameSpice Weapon's (`DotWeaponProjectile`, `DotWeaponSpawn`) and the game's to model.
+- **Anything about what a player holds.** Rate of fire, magazines, reloading, switching, recoil and melee arcs are GameSpice Weapon's; a `DotShot` is the seam.
 - **Ballistics.** No drag, wind, penetration or ricochet. `DotDamageType` has the falloff a shooter needs and nothing a simulation would want.
 - **Hit markers, tracers, decals, sounds.** `DotShot.impacts` and the signals carry what a presentation layer needs; no art, no audio.
-- **Ammunition as pickups.** `DotWeaponArsenal.add_ammo` is the API in dot-weapon; the world entity that calls it belongs to dot-loadout or the game.
+- **Ammunition as pickups.** `DotWeaponArsenal.add_ammo` is the API in GameSpice Weapon; the world entity that calls it belongs to GameSpice Loadout or the game.
 - **Damage over time.** No burning, bleeding or poison: `apply_damage` per tick from a game's own timer is the whole implementation, and there is no shared piece worth extracting yet.
 
 ## Limbs
 
 A game that cuts bodies apart (dismemberment, a crawling zombie) needs a shot resolved to a named part and a world point. `DotHitbox.limb` is that name; it is separate from `group` because a group is a damage multiplier and two hitboxes can share one while being different limbs. The trace copies it to `Hit.limb`, the manager to `DotDamage.limb`, and after damage is applied `DotCombatManager.limb_hit(entity, limb, point, amount, impulse)` fires when the resolved damage reaches `limb_min_damage[limb]` (else `default`, else 0). Thresholds are data: `limb_min_damage:` in `cfg/addons/dot-combat/*.yml`, read at setup.
 
-What a limb does is the host's. The signal is the neutral form; `limb_target_fn` is the shortcut: a callable from entity to any object with `hit(point, amount, impulse)`, so dot-npc's `DotNpcLimbs` is driven without either addon naming the other. A host whose hitboxes are not tagged (its body has one capsule) can pass `damage.point` to `DotNpcLimbs.hit` itself; it resolves the region from the bones.
+What a limb does is the host's. The signal is the neutral form; `limb_target_fn` is the shortcut: a callable from entity to any object with `hit(point, amount, impulse)`, so GameSpice NPC's `DotNpcLimbs` is driven without either addon naming the other. A host whose hitboxes are not tagged (its body has one capsule) can pass `damage.point` to `DotNpcLimbs.hit` itself; it resolves the region from the bones.
 
 ## Immunity to a damage kind
 
