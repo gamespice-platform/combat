@@ -1,4 +1,4 @@
-[![Combat - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/206-dot-combat)
+[![Combat - GameSpice addon](docs/banner.png)](https://moddingcommunity.com/a/25-gs-combat)
 
 Health, damage and hit registration for a Godot 4.7+ shooter. It gives you hitboxes, scatter that is the same everywhere, lag compensation, and a resolver that turns a shot into damage under one set of rules. A client can predict its own fire while the server stays the authority. Part of the [dot-*](https://github.com/gamespice-platform) family.
 
