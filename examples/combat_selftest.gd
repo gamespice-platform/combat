@@ -14,13 +14,13 @@ extends "res://examples/selftest/prefilter_tests.gd"
 ## re-ran it, a rewind that is never restored, and a client-reported muzzle that is
 ## taken at its word.
 
-const CHECKS := 374
+const CHECKS := 377
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
 ## bailed out early after a failed guard is counted as not finished on purpose. The CHECKS
 ## total is the other half — see docs/testing.md.
-const SECTIONS := 34
+const SECTIONS := 35
 
 
 func _ready() -> void:
@@ -39,6 +39,7 @@ func _run() -> void:
 	_test_hitbox_geometry()
 	_test_hitbox_precedence()
 	_test_flat_trace()
+	_test_flat_trace_native()
 	_test_resolver_rules()
 	_test_criticals()
 	_test_manager_hitscan()
@@ -539,6 +540,57 @@ func _test_flat_trace() -> void:
 	var through := walled.ray(Vector3(0.0, 1.0, 0.0), Vector3.FORWARD, 100.0)
 	_check(through.ok(), "a wall built from two points blocks a ray")
 	_close(through.distance, 3.8, "on the near side of its thickness")
+	_done()
+
+
+## Random boxes and rays through the native box walk (GameSpice Sim's DotSimFlatTrace) and the
+## script loop: every hit equal to the bit. Without the library both sides are the script.
+func _test_flat_trace_native() -> void:
+	_section("flat trace: native walk against script")
+	var loaded := ClassDB.class_exists(&"DotSimFlatTrace")
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20261121
+	var same := 0
+	var hits := 0
+	var cases := 0
+	var first_miss := ""
+	for world in 40:
+		var gd := DotTraceFlat.with_floor(rng.randf_range(-2.0, 1.0)) if rng.randf() < 0.5 else DotTraceFlat.new()
+		gd.native = false
+		var nat := DotTraceFlat.new()
+		nat.floor_y = gd.floor_y
+		for b in rng.randi_range(0, 80):
+			var at := Vector3(rng.randf_range(-20.0, 20.0), rng.randf_range(-2.0, 6.0), rng.randf_range(-20.0, 20.0))
+			var size := Vector3(rng.randf_range(-4.0, 4.0), rng.randf_range(0.0, 5.0), rng.randf_range(-4.0, 4.0))
+			if rng.randf() < 0.1:
+				size.x = 0.0
+			var material := StringName("m%d" % b)
+			gd.add_box(AABB(at, size), material)
+			nat.add_box(AABB(at, size), material)
+		for r in 200:
+			var from := Vector3(rng.randf_range(-25.0, 25.0), rng.randf_range(-1.0, 7.0), rng.randf_range(-25.0, 25.0))
+			var dir := Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0))
+			match rng.randi_range(0, 4):
+				0: dir = Vector3(-1.0 if r % 2 == 0 else 1.0, 0.0, 0.0)
+				1: dir.y = 0.0
+			dir = dir.normalized() if dir.length() > 0.001 else Vector3.FORWARD
+			var reach := rng.randf_range(0.5, 80.0)
+			var a := gd.ray(from, dir, reach)
+			var b := nat.ray(from, dir, reach)
+			cases += 1
+			if a.ok():
+				hits += 1
+			if a.blocked == b.blocked and a.point == b.point and a.normal == b.normal and a.distance == b.distance and a.material == b.material and a.ok() == b.ok():
+				same += 1
+			elif first_miss == "":
+				first_miss = "world %d ray %d: script %s %s %s, native %s %s %s" % [world, r, a.point, a.distance, a.material, b.point, b.distance, b.material]
+	_check(same == cases and hits > cases / 5, "%d random rays (%d hits): the %s walk matches the script to the bit" % [cases, hits, "native" if loaded else "script (no library)"], first_miss)
+	var t := DotTraceFlat.new().add_box(AABB(Vector3.ZERO, Vector3.ONE))
+	_check(t.is_native() == loaded, "the native walk is on exactly when the library is loaded")
+	t.boxes.append(AABB(Vector3(4.0, 0.0, 0.0), Vector3.ONE))
+	var stale := t.is_native()
+	t.repack()
+	_check(not stale and t.is_native() == loaded, "a direct edit of boxes falls back to script until repack")
 	_done()
 
 

@@ -16,11 +16,22 @@ extends DotTrace
 ## Ground plane height. Set to -INF for no ground.
 var floor_y: float = -INF
 
-## Axis-aligned solid boxes, in world space.
+## Axis-aligned solid boxes, in world space. Edit through [method add_box] and [method clear];
+## after changing it directly, call [method repack] (a different count alone falls back to script).
 var boxes: Array[AABB] = []
 
 ## Material id per box, parallel to [member boxes] (missing = none).
 var box_materials: Array[StringName] = []
+
+## Walk the boxes natively when GameSpice Sim's [code]DotSimFlatTrace[/code] is loaded (same hits to
+## the bit; the script loop is the web build's path and the fallback). Off forces the script.
+var native := true
+
+## [member boxes] as low then high corner each, what the native walk reads.
+var _corners := PackedVector3Array()
+
+## The stateless native walker, shared by every trace and thread; null without the library.
+static var _walker: Object = ClassDB.instantiate(&"DotSimFlatTrace") if ClassDB.class_exists(&"DotSimFlatTrace") else null
 
 
 static func with_floor(y: float = 0.0) -> DotTraceFlat:
@@ -34,8 +45,11 @@ static func with_floor(y: float = 0.0) -> DotTraceFlat:
 
 ## Adds a solid box. Returns self, so a level is one chained expression.
 func add_box(box: AABB, material: StringName = &"") -> DotTraceFlat:
-	boxes.append(box.abs())
+	var b := box.abs()
+	boxes.append(b)
 	box_materials.append(material)
+	_corners.append(b.position)
+	_corners.append(b.position + b.size)
 	return self
 
 
@@ -66,6 +80,20 @@ func add_wall(
 func clear() -> void:
 	boxes.clear()
 	box_materials.clear()
+	_corners.clear()
+
+
+## Rebuilds the native walk's copy of [member boxes] after a direct edit.
+func repack() -> void:
+	_corners.clear()
+	for b in boxes:
+		_corners.append(b.position)
+		_corners.append(b.position + b.size)
+
+
+## Whether rays walk the boxes natively now.
+func is_native() -> bool:
+	return native and _walker != null and _corners.size() == boxes.size() * 2
 
 
 func _world_ray(
@@ -81,6 +109,17 @@ func _world_ray(
 		if t >= 0.0 and t <= nearest:
 			nearest = t
 			best = _make_hit(from + direction * t, Vector3.UP, t)
+
+	if native and _walker != null and _corners.size() == boxes.size() * 2:
+		var i: int = _walker.nearest(_corners, from, direction, nearest)
+		if i < 0:
+			return best
+		var box := boxes[i]
+		var t := _ray_aabb(from, direction, box, nearest)
+		best = _make_hit(from + direction * t, _box_normal(box, from + direction * t), t)
+		if i < box_materials.size():
+			best.material = box_materials[i]
+		return best
 
 	for i in boxes.size():
 		var box := boxes[i]
