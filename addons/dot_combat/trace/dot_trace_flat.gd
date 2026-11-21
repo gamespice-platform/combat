@@ -33,6 +33,12 @@ var _corners := PackedVector3Array()
 ## The stateless native walker, shared by every trace and thread; null without the library.
 static var _walker: Object = ClassDB.instantiate(&"DotSimFlatTrace") if ClassDB.class_exists(&"DotSimFlatTrace") else null
 
+## This world's native bounding-volume hierarchy (GameSpice Sim's [code]DotSimFlatBvh[/code]), built
+## on the first ray after the boxes change, so a ray visits the boxes near its line, not all of them.
+## Read-only once built; build it ([method prepare]) before worker threads share the trace.
+var _bvh: Object = null
+var _bvh_stale := true
+
 
 static func with_floor(y: float = 0.0) -> DotTraceFlat:
 	# Not this class's own name. A script that names itself in an expression, loaded after
@@ -50,6 +56,7 @@ func add_box(box: AABB, material: StringName = &"") -> DotTraceFlat:
 	box_materials.append(material)
 	_corners.append(b.position)
 	_corners.append(b.position + b.size)
+	_bvh_stale = true
 	return self
 
 
@@ -81,6 +88,7 @@ func clear() -> void:
 	boxes.clear()
 	box_materials.clear()
 	_corners.clear()
+	_bvh_stale = true
 
 
 ## Rebuilds the native walk's copy of [member boxes] after a direct edit.
@@ -89,6 +97,19 @@ func repack() -> void:
 	for b in boxes:
 		_corners.append(b.position)
 		_corners.append(b.position + b.size)
+	_bvh_stale = true
+
+
+## Builds the native hierarchy now if the boxes changed since it was built. Called by the first ray
+## anyway; call it once after loading a level so worker threads never race to build it.
+func prepare() -> void:
+	if not is_native() or not _bvh_stale:
+		return
+	if _bvh == null and ClassDB.class_exists(&"DotSimFlatBvh"):
+		_bvh = ClassDB.instantiate(&"DotSimFlatBvh")
+	if _bvh != null:
+		_bvh.build(_corners)
+	_bvh_stale = false
 
 
 ## Whether rays walk the boxes natively now.
@@ -111,7 +132,9 @@ func _world_ray(
 			best = _make_hit(from + direction * t, Vector3.UP, t)
 
 	if native and _walker != null and _corners.size() == boxes.size() * 2:
-		var i: int = _walker.nearest(_corners, from, direction, nearest)
+		if _bvh_stale:
+			prepare()
+		var i: int = _bvh.nearest(from, direction, nearest) if _bvh != null else _walker.nearest(_corners, from, direction, nearest)
 		if i < 0:
 			return best
 		var box := boxes[i]
@@ -132,6 +155,60 @@ func _world_ray(
 			best.material = box_materials[i]
 
 	return best
+
+
+## Every ray's world hit in one native call (struct-of-arrays): ray [code]k[/code] runs from
+## [code]froms[k][/code] along [code]directions[k][/code] for at most [code]max_distances[k][/code].
+## Returns [code]{kind: PackedByteArray (0 miss, 1 ground, 2 box), index: PackedInt32Array (the
+## box, else -1), t: PackedFloat64Array (the distance, else the limit)}[/code], or an empty
+## dictionary when the native walk is off (use [method world_rays], which falls back to the script).
+func world_rays_raw(
+	froms: PackedVector3Array,
+	directions: PackedVector3Array,
+	max_distances: PackedFloat64Array
+) -> Dictionary:
+	if not is_native():
+		return {}
+	prepare()
+	if _bvh == null:
+		return {}
+	return _bvh.world_rays(floor_y, froms, directions, max_distances)
+
+
+## [method _world_ray] for many rays at once: the same hit per ray, one native call for all of
+## them when the library is loaded (the script loop otherwise, also the web build's path).
+func world_rays(
+	froms: PackedVector3Array,
+	directions: PackedVector3Array,
+	max_distances: PackedFloat64Array
+) -> Array[DotHitbox.Hit]:
+	var out: Array[DotHitbox.Hit] = []
+	var n := mini(froms.size(), mini(directions.size(), max_distances.size()))
+	var raw := world_rays_raw(froms, directions, max_distances)
+	if raw.is_empty():
+		for k in n:
+			out.append(_world_ray(froms[k], directions[k], max_distances[k]))
+		return out
+	var kind: PackedByteArray = raw["kind"]
+	var index: PackedInt32Array = raw["index"]
+	var dist: PackedFloat64Array = raw["t"]
+	for k in n:
+		if kind[k] == 0:
+			out.append(DotHitbox.Hit.new())
+			continue
+		var from := froms[k]
+		var direction := directions[k]
+		var t := dist[k]
+		if kind[k] == 1:
+			out.append(_make_hit(from + direction * t, Vector3.UP, t))
+			continue
+		var i := index[k]
+		var point := from + direction * t
+		var hit := _make_hit(point, _box_normal(boxes[i], point), t)
+		if i < box_materials.size():
+			hit.material = box_materials[i]
+		out.append(hit)
+	return out
 
 
 static func _make_hit(

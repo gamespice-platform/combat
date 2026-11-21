@@ -14,7 +14,7 @@ extends "res://examples/selftest/prefilter_tests.gd"
 ## re-ran it, a rewind that is never restored, and a client-reported muzzle that is
 ## taken at its word.
 
-const CHECKS := 377
+const CHECKS := 378
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -554,12 +554,15 @@ func _test_flat_trace_native() -> void:
 	var hits := 0
 	var cases := 0
 	var first_miss := ""
+	var batched := 0
+	var batched_same := 0
+	var batch_miss := ""
 	for world in 40:
 		var gd := DotTraceFlat.with_floor(rng.randf_range(-2.0, 1.0)) if rng.randf() < 0.5 else DotTraceFlat.new()
 		gd.native = false
 		var nat := DotTraceFlat.new()
 		nat.floor_y = gd.floor_y
-		for b in rng.randi_range(0, 80):
+		for b in [0, 3, 12, rng.randi_range(0, 80), 400][world % 5]:
 			var at := Vector3(rng.randf_range(-20.0, 20.0), rng.randf_range(-2.0, 6.0), rng.randf_range(-20.0, 20.0))
 			var size := Vector3(rng.randf_range(-4.0, 4.0), rng.randf_range(0.0, 5.0), rng.randf_range(-4.0, 4.0))
 			if rng.randf() < 0.1:
@@ -567,6 +570,10 @@ func _test_flat_trace_native() -> void:
 			var material := StringName("m%d" % b)
 			gd.add_box(AABB(at, size), material)
 			nat.add_box(AABB(at, size), material)
+		var batch_from := PackedVector3Array()
+		var batch_dir := PackedVector3Array()
+		var batch_reach := PackedFloat64Array()
+		var singles: Array[DotHitbox.Hit] = []
 		for r in 200:
 			var from := Vector3(rng.randf_range(-25.0, 25.0), rng.randf_range(-1.0, 7.0), rng.randf_range(-25.0, 25.0))
 			var dir := Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0))
@@ -577,14 +584,27 @@ func _test_flat_trace_native() -> void:
 			var reach := rng.randf_range(0.5, 80.0)
 			var a := gd.ray(from, dir, reach)
 			var b := nat.ray(from, dir, reach)
+			batch_from.append(from)
+			batch_dir.append(dir)
+			batch_reach.append(reach)
+			singles.append(a)
 			cases += 1
 			if a.ok():
 				hits += 1
-			if a.blocked == b.blocked and a.point == b.point and a.normal == b.normal and a.distance == b.distance and a.material == b.material and a.ok() == b.ok():
+			if _same_hit(a, b):
 				same += 1
 			elif first_miss == "":
 				first_miss = "world %d ray %d: script %s %s %s, native %s %s %s" % [world, r, a.point, a.distance, a.material, b.point, b.distance, b.material]
+		var many := nat.world_rays(batch_from, batch_dir, batch_reach)
+		for r in many.size():
+			batched += 1
+			# gd.ray adds the entity pass; with no hitbox sets it is the world ray alone.
+			if _same_hit(singles[r], many[r]):
+				batched_same += 1
+			elif batch_miss == "":
+				batch_miss = "world %d ray %d: script %s %s, batch %s %s" % [world, r, singles[r].point, singles[r].distance, many[r].point, many[r].distance]
 	_check(same == cases and hits > cases / 5, "%d random rays (%d hits): the %s walk matches the script to the bit" % [cases, hits, "native" if loaded else "script (no library)"], first_miss)
+	_check(batched == cases and batched_same == batched, "%d rays in one world_rays call per world match the script's one-at-a-time hits to the bit" % batched, batch_miss)
 	var t := DotTraceFlat.new().add_box(AABB(Vector3.ZERO, Vector3.ONE))
 	_check(t.is_native() == loaded, "the native walk is on exactly when the library is loaded")
 	t.boxes.append(AABB(Vector3(4.0, 0.0, 0.0), Vector3.ONE))
@@ -592,6 +612,10 @@ func _test_flat_trace_native() -> void:
 	t.repack()
 	_check(not stale and t.is_native() == loaded, "a direct edit of boxes falls back to script until repack")
 	_done()
+
+
+func _same_hit(a: DotHitbox.Hit, b: DotHitbox.Hit) -> bool:
+	return a.blocked == b.blocked and a.point == b.point and a.normal == b.normal and a.distance == b.distance and a.material == b.material and a.ok() == b.ok()
 
 
 # --- Arsenal ---------------------------------------------------------------
