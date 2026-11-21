@@ -1,10 +1,10 @@
 @tool
-class_name DotDamageRules
+class_name GSDamageRules
 extends Resource
 
 ## The rules that turn a hit into a number, in one editable place.
 ##
-## Separate from [DotCombatConfig] because these are a game-mode's decision rather
+## Separate from [GSCombatConfig] because these are a game-mode's decision rather
 ## than an installation's: warmup and the live round of the same match want different
 ## friendly fire, and swapping a resource is a cleaner way to say that than reaching
 ## into a config that also holds tick rates and log levels.
@@ -17,7 +17,7 @@ extends Resource
 @export var friendly_fire: bool = false
 
 ## Multiplies damage to a team-mate when [member friendly_fire] is on. Combined with
-## the damage type's own [member DotDamageType.friendly_scale].
+## the damage type's own [member GSDamageType.friendly_scale].
 @export_range(0.0, 2.0, 0.05) var friendly_scale: float = 1.0
 
 ## Whether damage to a team-mate is mirrored back at the attacker. The classic
@@ -38,7 +38,7 @@ extends Resource
 ## On regardless of [member friendly_fire]: with friendly fire off the stacked friend
 ## does not take damage, but still eats the bullet, so the shot that should have reached
 ## the enemy is lost. Off restores the old geometry-only behaviour. For a rule this flag
-## cannot express, assign [member DotCombatManager.pass_through_fn].
+## cannot express, assign [member GSCombatManager.pass_through_fn].
 @export var pass_through_team_mate_at_muzzle: bool = true
 
 ## Whether a shot passes through every team-mate, wherever they stand in the line.
@@ -64,10 +64,10 @@ extends Resource
 ## Whether per-hit-group multipliers apply.
 ##
 ## Off makes every hit do body damage, which is what a game without headshots wants
-## and what an explosion always wants — see [member DotDamageType.uses_hit_groups].
+## and what an explosion always wants — see [member GSDamageType.uses_hit_groups].
 @export var hit_groups: bool = true
 
-## Whether neck, stomach, hand, knee and foot are zones of their own. Off folds them into chest, arm and leg ([DotHitzone.coarse]). Cvar `mp_hitzones`.
+## Whether neck, stomach, hand, knee and foot are zones of their own. Off folds them into chest, arm and leg ([GSHitzone.coarse]). Cvar `mp_hitzones`.
 @export var hitzones: bool = false
 
 @export_group("Criticals")
@@ -75,7 +75,7 @@ extends Resource
 ## Whether a headshot is a critical hit.
 ##
 ## [b]A flag, not a number.[/b] With [member critical_scale] at 1 a critical does exactly
-## the damage it did before; what changes is [member DotDamage.critical], which is what a
+## the damage it did before; what changes is [member GSDamage.critical], which is what a
 ## game hangs its rewards on — a burst of points out of the body, a health drop, a meter
 ## filling, a marker over the victim. The head's own multiplier is still the hit group's.
 @export var critical_headshots: bool = true
@@ -135,15 +135,15 @@ func set_pass_through_level(level: int) -> void:
 	pass_through_team_mate_at_muzzle = clamped >= PASS_THROUGH_AT_MUZZLE
 
 
-static func permissive() -> DotDamageRules:
-	var rules := DotDamageRules.new()
+static func permissive() -> GSDamageRules:
+	var rules := GSDamageRules.new()
 	rules.friendly_fire = true
 	rules.self_damage = true
 	return rules
 
 
-static func strict() -> DotDamageRules:
-	var rules := DotDamageRules.new()
+static func strict() -> GSDamageRules:
+	var rules := GSDamageRules.new()
 	rules.friendly_fire = false
 	rules.self_damage = false
 	rules.maximum = 1000.0

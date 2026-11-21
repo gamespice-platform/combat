@@ -1,14 +1,14 @@
-class_name DotHitzone
+class_name GSHitzone
 extends RefCounted
 
 ## Body zones finer than the five classic hit groups, and which side of the body a shot landed on.
-## A zone is a [DotHitGroup] name on a [DotHitbox]. With [member DotDamageRules.hitzones] off (`mp_hitzones`
+## A zone is a [GSHitGroup] name on a [GSHitbox]. With [member GSDamageRules.hitzones] off (`mp_hitzones`
 ## 0, the default) the resolver folds a fine zone back to its coarse group; stats always see the fine zone.
 
 ## Every zone, head to feet.
 const ZONES: Array[StringName] = [
-	DotHitGroup.HEAD, DotHitGroup.NECK, DotHitGroup.CHEST, DotHitGroup.STOMACH,
-	DotHitGroup.ARM, DotHitGroup.HAND, DotHitGroup.LEG, DotHitGroup.KNEE, DotHitGroup.FOOT,
+	GSHitGroup.HEAD, GSHitGroup.NECK, GSHitGroup.CHEST, GSHitGroup.STOMACH,
+	GSHitGroup.ARM, GSHitGroup.HAND, GSHitGroup.LEG, GSHitGroup.KNEE, GSHitGroup.FOOT,
 ]
 
 const SIDE_LEFT := &"left"
@@ -24,12 +24,12 @@ const CONTEXT_SIDE := &"hit_side"
 ## The classic group a fine zone folds into when zones are off.
 static func coarse(zone: StringName) -> StringName:
 	match zone:
-		DotHitGroup.NECK, DotHitGroup.STOMACH:
-			return DotHitGroup.CHEST
-		DotHitGroup.HAND:
-			return DotHitGroup.ARM
-		DotHitGroup.FOOT, DotHitGroup.KNEE:
-			return DotHitGroup.LEG
+		GSHitGroup.NECK, GSHitGroup.STOMACH:
+			return GSHitGroup.CHEST
+		GSHitGroup.HAND:
+			return GSHitGroup.ARM
+		GSHitGroup.FOOT, GSHitGroup.KNEE:
+			return GSHitGroup.LEG
 	return zone
 
 
@@ -47,13 +47,13 @@ static func side_of(point: Vector3, centre: Vector3, direction: Vector3, half_wi
 
 
 ## Files the side of a hit on [param damage] (context `hit_side`); the hitbox's set gives the body centre and width.
-static func annotate(damage: DotDamage, hit: DotHitbox.Hit, direction: Vector3) -> void:
+static func annotate(damage: GSDamage, hit: GSHitbox.Hit, direction: Vector3) -> void:
 	if hit.hitbox == null:
 		return
 	var set_node: Node = hit.hitbox.get_parent()
-	while set_node != null and not (set_node is DotHitboxSet):
+	while set_node != null and not (set_node is GSHitboxSet):
 		set_node = set_node.get_parent()
 	if set_node == null:
 		return
-	var set := set_node as DotHitboxSet
+	var set := set_node as GSHitboxSet
 	damage.context[CONTEXT_SIDE] = side_of(hit.point, set.bounds_centre(), direction, set.bounds_radius * 0.25)

@@ -22,7 +22,7 @@ func _run() -> void:
 			reps = int(arg.substr(7))
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 4242
-	var trace := DotTraceFlat.with_floor(0.0)
+	var trace := GSTraceFlat.with_floor(0.0)
 	for b in n:
 		var at := Vector3(rng.randf_range(-45.0, 45.0), rng.randf_range(0.0, 4.0), rng.randf_range(-45.0, 45.0))
 		trace.add_box(AABB(at, Vector3(rng.randf_range(0.5, 6.0), rng.randf_range(0.5, 5.0), rng.randf_range(0.5, 6.0))))

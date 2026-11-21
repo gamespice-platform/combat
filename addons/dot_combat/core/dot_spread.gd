@@ -1,4 +1,4 @@
-class_name DotSpread
+class_name GSSpread
 extends RefCounted
 
 ## Deterministic shot scatter.
@@ -23,28 +23,28 @@ extends RefCounted
 ## [b]The mixing itself is GameSpice Core's.[/b] This file used to carry its own splitmix64,
 ## with every published constant's top bit cleared so GDScript would parse it as an
 ## [int] rather than a float -- a mixer that still mixed but was no longer the
-## algorithm it named. [DotRandomStream] writes those constants once, as their signed
+## algorithm it named. [GSRandomStream] writes those constants once, as their signed
 ## 64-bit values, so they wrap exactly as the reference does. Two implementations of
 ## one algorithm is one too many when the whole point is that two machines agree.
 
 ## Mixes four integers into one well-distributed value.
 ##
-## Kept as a named entry point on [DotSpread] rather than having callers reach for
-## [DotRandomStream] directly: what a weapon wants is "the scatter for this pellet of
+## Kept as a named entry point on [GSSpread] rather than having callers reach for
+## [GSRandomStream] directly: what a weapon wants is "the scatter for this pellet of
 ## this shot", and the four arguments in this order are that question. The mixing is
-## GameSpice Core's -- see [method DotRandomStream.mix4].
+## GameSpice Core's -- see [method GSRandomStream.mix4].
 static func hash4(a: int, b: int, c: int, d: int) -> int:
-	return DotRandomStream.mix4(a, b, c, d)
+	return GSRandomStream.mix4(a, b, c, d)
 
 
 ## A float in [0, 1) from a hash, using the top 24 bits.
 ##
-## See [method DotRandomStream.unit_from] for why the top bits and why exactly 24.
+## See [method GSRandomStream.unit_from] for why the top bits and why exactly 24.
 ## This once shifted a 63-bit value by 40 where 39 was needed, so one bit too few survived (23, not 24) and every value was in [0, 0.5), which made
 ## a spread cone that only ever covered half a circle -- the suite still checks for
 ## that, because the check is cheap and the symptom is not obviously a bug.
 static func unit(h: int) -> float:
-	return DotRandomStream.unit_from(h)
+	return GSRandomStream.unit_from(h)
 
 
 ## Rotates [param direction] by a scatter of at most [param angle_degrees].

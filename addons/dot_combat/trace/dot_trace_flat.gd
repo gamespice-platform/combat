@@ -1,5 +1,5 @@
-class_name DotTraceFlat
-extends DotTrace
+class_name GSTraceFlat
+extends GSTrace
 
 ## Traces world geometry against a list of analytic boxes and planes.
 ##
@@ -9,7 +9,7 @@ extends DotTrace
 ## depends on what ran before it, and a replay that re-derives a different answer than
 ## the original is a reconciliation loop that never converges.
 ##
-## The same reason GameSpice Player Controller ships [code]DotFpsFlatBody[/code]. This is not a
+## The same reason GameSpice Player Controller ships [code]GSFpsFlatBody[/code]. This is not a
 ## toy: a deathmatch level made of boxes is a deathmatch level, and every self-test in
 ## this project runs against one.
 
@@ -23,7 +23,7 @@ var boxes: Array[AABB] = []
 ## Material id per box, parallel to [member boxes] (missing = none).
 var box_materials: Array[StringName] = []
 
-## Walk the boxes natively when GameSpice Sim's [code]DotSimFlatTrace[/code] is loaded (same hits to
+## Walk the boxes natively when GameSpice Sim's [code]GSSimFlatTrace[/code] is loaded (same hits to
 ## the bit; the script loop is the web build's path and the fallback). Off forces the script.
 var native := true
 
@@ -31,16 +31,16 @@ var native := true
 var _corners := PackedVector3Array()
 
 ## The stateless native walker, shared by every trace and thread; null without the library.
-static var _walker: Object = ClassDB.instantiate(&"DotSimFlatTrace") if ClassDB.class_exists(&"DotSimFlatTrace") else null
+static var _walker: Object = ClassDB.instantiate(&"GSSimFlatTrace") if ClassDB.class_exists(&"GSSimFlatTrace") else null
 
-## This world's native bounding-volume hierarchy (GameSpice Sim's [code]DotSimFlatBvh[/code]), built
+## This world's native bounding-volume hierarchy (GameSpice Sim's [code]GSSimFlatBvh[/code]), built
 ## on the first ray after the boxes change, so a ray visits the boxes near its line, not all of them.
 ## Read-only once built; build it ([method prepare]) before worker threads share the trace.
 var _bvh: Object = null
 var _bvh_stale := true
 
 
-static func with_floor(y: float = 0.0) -> DotTraceFlat:
+static func with_floor(y: float = 0.0) -> GSTraceFlat:
 	# Not this class's own name. A script that names itself in an expression, loaded after
 	# its base, cuts Godot 4.7.2's exit teardown short and leaks every script loaded before
 	# it. See docs/gdscript-hazards.md, "A script that names itself".
@@ -50,7 +50,7 @@ static func with_floor(y: float = 0.0) -> DotTraceFlat:
 
 
 ## Adds a solid box. Returns self, so a level is one chained expression.
-func add_box(box: AABB, material: StringName = &"") -> DotTraceFlat:
+func add_box(box: AABB, material: StringName = &"") -> GSTraceFlat:
 	var b := box.abs()
 	boxes.append(b)
 	box_materials.append(material)
@@ -69,7 +69,7 @@ func add_wall(
 	to: Vector3,
 	height: float,
 	thickness: float = 0.25
-) -> DotTraceFlat:
+) -> GSTraceFlat:
 	var half := thickness * 0.5
 	var min_point := Vector3(
 		minf(from.x, to.x) - half,
@@ -105,8 +105,8 @@ func repack() -> void:
 func prepare() -> void:
 	if not is_native() or not _bvh_stale:
 		return
-	if _bvh == null and ClassDB.class_exists(&"DotSimFlatBvh"):
-		_bvh = ClassDB.instantiate(&"DotSimFlatBvh")
+	if _bvh == null and ClassDB.class_exists(&"GSSimFlatBvh"):
+		_bvh = ClassDB.instantiate(&"GSSimFlatBvh")
 	if _bvh != null:
 		_bvh.build(_corners)
 	_bvh_stale = false
@@ -121,8 +121,8 @@ func _world_ray(
 	from: Vector3,
 	direction: Vector3,
 	max_distance: float
-) -> DotHitbox.Hit:
-	var best := DotHitbox.Hit.new()
+) -> GSHitbox.Hit:
+	var best := GSHitbox.Hit.new()
 	var nearest := max_distance
 
 	if floor_y > -INF and direction.y < -0.000001:
@@ -181,8 +181,8 @@ func world_rays(
 	froms: PackedVector3Array,
 	directions: PackedVector3Array,
 	max_distances: PackedFloat64Array
-) -> Array[DotHitbox.Hit]:
-	var out: Array[DotHitbox.Hit] = []
+) -> Array[GSHitbox.Hit]:
+	var out: Array[GSHitbox.Hit] = []
 	var n := mini(froms.size(), mini(directions.size(), max_distances.size()))
 	var raw := world_rays_raw(froms, directions, max_distances)
 	if raw.is_empty():
@@ -194,7 +194,7 @@ func world_rays(
 	var dist: PackedFloat64Array = raw["t"]
 	for k in n:
 		if kind[k] == 0:
-			out.append(DotHitbox.Hit.new())
+			out.append(GSHitbox.Hit.new())
 			continue
 		var from := froms[k]
 		var direction := directions[k]
@@ -215,13 +215,13 @@ static func _make_hit(
 	point: Vector3,
 	normal: Vector3,
 	distance: float
-) -> DotHitbox.Hit:
-	var hit := DotHitbox.Hit.new()
+) -> GSHitbox.Hit:
+	var hit := GSHitbox.Hit.new()
 	hit.point = point
 	hit.normal = normal
 	hit.distance = distance
 	hit.blocked = true
-	hit.group = DotHitGroup.GENERIC
+	hit.group = GSHitGroup.GENERIC
 	return hit
 
 

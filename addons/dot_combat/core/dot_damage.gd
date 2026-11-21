@@ -1,8 +1,8 @@
-class_name DotDamage
+class_name GSDamage
 extends RefCounted
 
 ## One damage event, from the moment a weapon decides it happened to the moment a
-## [DotHealth] has finished with it.
+## [GSHealth] has finished with it.
 ##
 ## The same object travels the whole way and is mutated by each stage, so a hook that
 ## wants to see why a number came out the way it did can read
@@ -21,16 +21,16 @@ var victim: int = 0
 ## Damage before any scaling. Kept so a hook can see what the weapon asked for.
 var base_amount: float = 0.0
 
-## Damage after scaling, and what [DotHealth] will actually apply.
+## Damage after scaling, and what [GSHealth] will actually apply.
 var amount: float = 0.0
 
-var type: DotDamageType = null
+var type: GSDamageType = null
 
-## Which region was hit. See [DotHitGroup].
-var hit_group: StringName = DotHitGroup.GENERIC
+## Which region was hit. See [GSHitGroup].
+var hit_group: StringName = GSHitGroup.GENERIC
 
 ## World-space point of impact, for effects and for splash origin.
-## The hitbox's limb tag (empty for none). See [member DotHitbox.limb].
+## The hitbox's limb tag (empty for none). See [member GSHitbox.limb].
 var limb: StringName = &""
 
 var point: Vector3 = Vector3.ZERO
@@ -56,10 +56,10 @@ var refused: bool = false
 ## Why it was refused. For logs and for tests; never shown to a player.
 var refusal: String = ""
 
-## How much armour actually absorbed. Filled in by [DotHealth].
+## How much armour actually absorbed. Filled in by [GSHealth].
 var armour_absorbed: float = 0.0
 
-## How much health was actually lost. Filled in by [DotHealth], and the number a kill
+## How much health was actually lost. Filled in by [GSHealth], and the number a kill
 ## feed and a damage counter should use — [member amount] is what was asked for, this
 ## is what landed.
 var health_lost: float = 0.0
@@ -67,7 +67,7 @@ var health_lost: float = 0.0
 ## Whether this event took the victim from alive to dead.
 var lethal: bool = false
 
-## Whether the resolver judged this a critical hit. See [member DotDamageRules.critical_headshots].
+## Whether the resolver judged this a critical hit. See [member GSDamageRules.critical_headshots].
 var critical: bool = false
 
 ## Free-form space for a game's own rules to carry state between hooks.
@@ -78,9 +78,9 @@ static func make(
 	p_attacker: int,
 	p_victim: int,
 	p_amount: float,
-	p_type: DotDamageType
-) -> DotDamage:
-	var d := DotDamage.new()
+	p_type: GSDamageType
+) -> GSDamage:
+	var d := GSDamage.new()
 	d.attacker = p_attacker
 	d.victim = p_victim
 	d.base_amount = p_amount
@@ -98,7 +98,7 @@ func is_world_damage() -> bool:
 
 
 func is_headshot() -> bool:
-	return hit_group == DotHitGroup.HEAD
+	return hit_group == GSHitGroup.HEAD
 
 
 ## Multiplies [member amount] and leaves a trace of why.
@@ -148,8 +148,8 @@ func describe() -> Dictionary:
 
 func _to_string() -> String:
 	if refused:
-		return "DotDamage(refused: %s)" % refusal
-	return "DotDamage(%d -> %d, %.1f %s%s)" % [
+		return "GSDamage(refused: %s)" % refusal
+	return "GSDamage(%d -> %d, %.1f %s%s)" % [
 		attacker,
 		victim,
 		amount,

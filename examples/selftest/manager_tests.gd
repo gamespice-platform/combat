@@ -6,15 +6,15 @@ extends "res://examples/selftest/wall_tests.gd"
 func _test_manager_hitscan() -> void:
 	_section("manager: hitscan")
 
-	var trace := DotTraceFlat.with_floor(0.0)
-	var manager := _make_manager(trace, DotDamageRules.new())
+	var trace := GSTraceFlat.with_floor(0.0)
+	var manager := _make_manager(trace, GSDamageRules.new())
 
 	var victim := _make_player(Vector3(0.0, 0.0, -10.0))
 	_hitboxes_of(victim).register_with(manager, 2)
 	manager.register_health(2, _health_of(victim))
 
 	var kills: Array[int] = []
-	manager.entity_killed.connect(func(id: int, _d: DotDamage) -> void: kills.append(id))
+	manager.entity_killed.connect(func(id: int, _d: GSDamage) -> void: kills.append(id))
 
 	var shot := _rifle_shot(1, 100, 1)
 	shot.origin = Vector3(0.0, 1.0, 0.0)
@@ -26,7 +26,7 @@ func _test_manager_hitscan() -> void:
 	_check(shot.damages.size() == 1, "a shot at a player produces one damage event")
 	_check(shot.damages[0].victim == 2, "attributed to the right victim")
 	_check(
-		shot.damages[0].hit_group == DotHitGroup.CHEST,
+		shot.damages[0].hit_group == GSHitGroup.CHEST,
 		"in the right hit group",
 		String(shot.damages[0].hit_group)
 	)
@@ -58,7 +58,7 @@ func _test_manager_hitscan() -> void:
 	_hitscan_never_self(manager)
 
 
-func _hitscan_never_self(manager: DotCombatManager) -> void:
+func _hitscan_never_self(manager: GSCombatManager) -> void:
 	# A shooter cannot shoot themselves with a hitscan weapon by aiming at their feet.
 	var shooter := _make_player(Vector3(0.0, 0.0, 0.0))
 	_hitboxes_of(shooter).register_with(manager, 1)
@@ -86,9 +86,9 @@ func _hitscan_never_self(manager: DotCombatManager) -> void:
 func _test_muzzle_inside_body() -> void:
 	_section("manager: a muzzle inside a body")
 
-	var rules := DotDamageRules.new()
+	var rules := GSDamageRules.new()
 	rules.friendly_fire = true
-	var manager := _make_manager(DotTraceFlat.with_floor(0.0), rules)
+	var manager := _make_manager(GSTraceFlat.with_floor(0.0), rules)
 	var teams := {1: 1, 2: 1, 3: 2, 4: 2}
 	manager.resolver.team_of = func(id: int) -> int: return int(teams.get(id, 0))
 
@@ -101,7 +101,7 @@ func _test_muzzle_inside_body() -> void:
 		manager.register_health(pair[1], _health_of(pair[0]))
 
 	var index := [0]
-	var fire := func() -> DotShot:
+	var fire := func() -> GSShot:
 		index[0] += 1
 		var shot := _rifle_shot(1, 200 + index[0], index[0])
 		shot.origin = Vector3(0.0, 1.4, 0.0)
@@ -109,13 +109,13 @@ func _test_muzzle_inside_body() -> void:
 		shot.scatter()
 		return manager.resolve_shot(shot)
 
-	var victims := func(shot: DotShot) -> Array:
+	var victims := func(shot: GSShot) -> Array:
 		var out := []
 		for damage in shot.damages:
 			out.append(damage.victim)
 		return out
 
-	var stacked: DotShot = fire.call()
+	var stacked: GSShot = fire.call()
 	_check(
 		victims.call(stacked) == [3],
 		"a shot from inside a team-mate goes on to the enemy it was aimed at",
@@ -126,7 +126,7 @@ func _test_muzzle_inside_body() -> void:
 	# Friendly fire off is not enough on its own: the friend refuses the damage but still
 	# eats the bullet, and the enemy is never reached.
 	rules.friendly_fire = false
-	var no_ff: DotShot = fire.call()
+	var no_ff: GSShot = fire.call()
 	_check(
 		victims.call(no_ff) == [3] and not no_ff.damages[0].refused,
 		"with friendly fire off the enemy is still reached, not lost to the friend",
@@ -138,7 +138,7 @@ func _test_muzzle_inside_body() -> void:
 	var hugger := _make_player(Vector3.ZERO)
 	_hitboxes_of(hugger).register_with(manager, 4)
 	manager.register_health(4, _health_of(hugger))
-	var point_blank: DotShot = fire.call()
+	var point_blank: GSShot = fire.call()
 	_check(
 		victims.call(point_blank) == [4] and is_zero_approx(point_blank.damages[0].distance),
 		"an enemy holding the muzzle is still a point-blank hit at 0 m",
@@ -149,25 +149,25 @@ func _test_muzzle_inside_body() -> void:
 	_muzzle_rules_tail(manager, rules, friend, enemy, fire, victims)
 
 
-func _muzzle_rules_tail(manager: DotCombatManager, rules: DotDamageRules, friend: Node3D, enemy: Node3D, fire: Callable, victims: Callable) -> void:
+func _muzzle_rules_tail(manager: GSCombatManager, rules: GSDamageRules, friend: Node3D, enemy: Node3D, fire: Callable, victims: Callable) -> void:
 	# A team-mate in the line, muzzle outside them, is friendly fire as the rules say.
 	friend.position = Vector3(0.0, 0.0, -3.0)
-	var in_line: DotShot = fire.call()
+	var in_line: GSShot = fire.call()
 	_check(victims.call(in_line) == [2], "a team-mate merely in the line is still hit")
 	friend.position = Vector3.ZERO
 
 	# The policy is a rule, and can be turned off.
 	rules.pass_through_team_mate_at_muzzle = false
-	var old_way: DotShot = fire.call()
+	var old_way: GSShot = fire.call()
 	_check(victims.call(old_way) == [2], "with the rule off the stacked team-mate is hit again")
 	rules.pass_through_team_mate_at_muzzle = true
 
 	# And replaced: a game whose overlap is not a team question.
-	manager.pass_through_fn = func(_s: DotShot, _set: DotHitboxSet, id: int) -> bool:
+	manager.pass_through_fn = func(_s: GSShot, _set: GSHitboxSet, id: int) -> bool:
 		return id == 3
 	friend.position = Vector3(0.0, 0.0, -10.0)
 	enemy.position = Vector3.ZERO
-	var custom: DotShot = fire.call()
+	var custom: GSShot = fire.call()
 	_check(
 		victims.call(custom) == [2],
 		"pass_through_fn replaces the team rule",
@@ -177,7 +177,7 @@ func _muzzle_rules_tail(manager: DotCombatManager, rules: DotDamageRules, friend
 
 	# With no teams at all (a free-for-all) everyone holding the muzzle is an enemy.
 	manager.resolver.team_of = Callable()
-	var ffa: DotShot = fire.call()
+	var ffa: GSShot = fire.call()
 	_check(victims.call(ffa) == [3], "without teams a body holding the muzzle is hit")
 
 	manager.queue_free()
@@ -187,7 +187,7 @@ func _muzzle_rules_tail(manager: DotCombatManager, rules: DotDamageRules, friend
 
 
 func _pass_through_levels() -> void:
-	var levels := DotDamageRules.new()
+	var levels := GSDamageRules.new()
 	_check(levels.pass_through_level() == 1, "the default is 1: through a team-mate at the muzzle only")
 	levels.set_pass_through_level(0)
 	_check(
@@ -209,9 +209,9 @@ func _test_team_mate_pass_through_cvar() -> void:
 	_section("manager: the team-mate pass-through cvar")
 	_pass_through_levels()
 
-	var rules := DotDamageRules.new()
+	var rules := GSDamageRules.new()
 	rules.friendly_fire = true
-	var manager := _make_manager(DotTraceFlat.with_floor(0.0), rules)
+	var manager := _make_manager(GSTraceFlat.with_floor(0.0), rules)
 	var teams := {1: 1, 2: 1, 3: 2, 4: 2}
 	manager.resolver.team_of = func(id: int) -> int: return int(teams.get(id, 0))
 
@@ -241,7 +241,7 @@ func _test_team_mate_pass_through_cvar() -> void:
 	var add := func(n: String, value: String, _help: String, flags: int) -> FakeCvar:
 		var cv := FakeCvar.new()
 		cv.cvar_name = n
-		cv.value = "2" if n == DotCombatManager.CVAR_TEAMMATE_PASSTHROUGH else value
+		cv.value = "2" if n == GSCombatManager.CVAR_TEAMMATE_PASSTHROUGH else value
 		cv.flags = flags
 		made.append(cv)
 		return cv
@@ -265,14 +265,14 @@ func _test_team_mate_pass_through_cvar() -> void:
 	manager.forget(4)
 
 	# A game's own muzzle policy does not undo what the operator set.
-	manager.pass_through_fn = func(_s: DotShot, _set: DotHitboxSet, _id: int) -> bool: return false
+	manager.pass_through_fn = func(_s: GSShot, _set: GSHitboxSet, _id: int) -> bool: return false
 	_check(fire.call() == [3], "pass_through_fn replaces the muzzle rule, not level 2")
 	manager.pass_through_fn = Callable()
 
 	_pass_through_live_changes(manager, rules, friend, fire, made)
 
 
-func _pass_through_live_changes(manager: DotCombatManager, rules: DotDamageRules, friend: Node3D, fire: Callable, made: Array[FakeCvar]) -> void:
+func _pass_through_live_changes(manager: GSCombatManager, rules: GSDamageRules, friend: Node3D, fire: Callable, made: Array[FakeCvar]) -> void:
 	# Live: the next shot after a change uses it.
 	made[0].set_value("1")
 	_check(fire.call() == [2], "changed to 1 at runtime, a team-mate in the line is friendly fire again")
@@ -299,9 +299,9 @@ func _pass_through_live_changes(manager: DotCombatManager, rules: DotDamageRules
 func _test_client_follows_the_server_cvar() -> void:
 	_section("manager: a client follows the server's pass-through cvar")
 
-	var rules := DotDamageRules.new()
+	var rules := GSDamageRules.new()
 	rules.friendly_fire = true
-	var manager := _make_manager(DotTraceFlat.with_floor(0.0), rules)
+	var manager := _make_manager(GSTraceFlat.with_floor(0.0), rules)
 	manager.is_authority = false
 	var teams := {1: 1, 2: 1, 3: 2}
 	manager.resolver.team_of = func(id: int) -> int: return int(teams.get(id, 0))
@@ -359,8 +359,8 @@ func _test_client_follows_the_server_cvar() -> void:
 func _test_manager_splash() -> void:
 	_section("manager: splash")
 
-	var trace := DotTraceFlat.with_floor(0.0)
-	var rules := DotDamageRules.new()
+	var trace := GSTraceFlat.with_floor(0.0)
+	var rules := GSDamageRules.new()
 	rules.self_damage = true
 	var manager := _make_manager(trace, rules)
 
@@ -372,7 +372,7 @@ func _test_manager_splash() -> void:
 	_hitboxes_of(far).register_with(manager, 3)
 	manager.register_health(3, _health_of(far))
 
-	var splash_type := DotDamageType.make(&"blast")
+	var splash_type := GSDamageType.make(&"blast")
 	splash_type.uses_hit_groups = false
 	splash_type.armour_share = 0.0
 	splash_type.self_scale = 0.5
@@ -396,7 +396,7 @@ func _test_manager_splash() -> void:
 	)
 
 	# Splash must not travel through a wall.
-	var walled := DotTraceFlat.with_floor(0.0)
+	var walled := GSTraceFlat.with_floor(0.0)
 	walled.add_box(AABB(Vector3(2.0, 0.0, -12.0), Vector3(0.4, 3.0, 4.0)))
 	var manager2 := _make_manager(walled, rules)
 
@@ -428,10 +428,10 @@ func _test_manager_splash() -> void:
 func _test_explosion_cover() -> void:
 	_section("explosions: walls and fences")
 
-	var trace := DotTraceFlat.with_floor(0.0)
+	var trace := GSTraceFlat.with_floor(0.0)
 	trace.add_box(AABB(Vector3(2.0, 0.0, -12.0), Vector3(0.4, 3.0, 4.0)), &"concrete")
 	trace.add_box(AABB(Vector3(-2.0, 0.0, -12.0), Vector3(0.02, 3.0, 4.0)), &"fence")
-	var manager := _make_manager(trace, DotDamageRules.new())
+	var manager := _make_manager(trace, GSDamageRules.new())
 	var centre := Vector3(0.0, 1.0, -10.0)
 
 	var open := _make_player(Vector3(0.0, 0.0, -13.0))
@@ -450,11 +450,11 @@ func _test_explosion_cover() -> void:
 	_close(_health_of(walled).health, 100.0, "a player the same distance behind a solid wall takes nothing")
 	_check(out.size() == 2, "and is not even in the damage list", str(out.size()))
 
-	# The design: splash needs a clear line, any solid world hit blocks it (DotTrace.line_of_sight), fences included.
+	# The design: splash needs a clear line, any solid world hit blocks it (GSTrace.line_of_sight), fences included.
 	# Only a shot's own pellets are penetration-aware (sheet_thickness), splash is not.
 	_close(_health_of(fenced).health, 100.0, "a thin fence blocks splash entirely: splash does not use penetration")
 
-	var rocket_type := DotDamageType.make(&"blast")
+	var rocket_type := GSDamageType.make(&"blast")
 	rocket_type.uses_hit_groups = false
 	rocket_type.armour_share = 0.0
 	var shot := _rocket_shot(rocket_type, 1, 300, 1)
@@ -476,8 +476,8 @@ func _test_explosion_cover() -> void:
 func _test_manager_validation() -> void:
 	_section("manager: validating what a client claims")
 
-	var trace := DotTraceFlat.with_floor(0.0)
-	var manager := _make_manager(trace, DotDamageRules.new())
+	var trace := GSTraceFlat.with_floor(0.0)
+	var manager := _make_manager(trace, GSDamageRules.new())
 	manager.config.max_origin_error = 1.0
 	manager.config.shots_per_second = 10.0
 
@@ -515,7 +515,7 @@ func _test_manager_validation() -> void:
 	# The rate limit catches a client sending a thousand fire commands a tick.
 	var refusals: Array[String] = []
 	manager.shot_refused.connect(
-		func(_s: DotShot, reason: String) -> void: refusals.append(reason)
+		func(_s: GSShot, reason: String) -> void: refusals.append(reason)
 	)
 
 	for i in range(40):
@@ -546,9 +546,9 @@ func _test_manager_validation() -> void:
 	_done()
 
 
-func _validation_client_instance(manager: DotCombatManager) -> void:
+func _validation_client_instance(manager: GSCombatManager) -> void:
 	# A client instance traces but never applies damage.
-	var client := _make_manager(DotTraceFlat.with_floor(0.0), DotDamageRules.new())
+	var client := _make_manager(GSTraceFlat.with_floor(0.0), GSDamageRules.new())
 	client.is_authority = false
 	var target := _make_player(Vector3(0.0, 0.0, -10.0))
 	_hitboxes_of(target).register_with(client, 5)
@@ -574,8 +574,8 @@ func _validation_client_instance(manager: DotCombatManager) -> void:
 func _test_lag_compensation() -> void:
 	_section("lag compensation")
 
-	var trace := DotTraceFlat.with_floor(0.0)
-	var manager := _make_manager(trace, DotDamageRules.new())
+	var trace := GSTraceFlat.with_floor(0.0)
+	var manager := _make_manager(trace, GSDamageRules.new())
 	manager.config.lag_compensation = true
 	manager.config.max_rewind_ms = 200.0
 
@@ -631,7 +631,7 @@ func _test_lag_compensation() -> void:
 	_lag_refused_shots_restore(manager, rewinds, restores)
 
 
-func _lag_refused_shots_restore(manager: DotCombatManager, rewinds: Array[float], restores: Array[int]) -> void:
+func _lag_refused_shots_restore(manager: GSCombatManager, rewinds: Array[float], restores: Array[int]) -> void:
 	# A refused shot must still not leak a rewind.
 	rewinds.clear()
 	restores.clear()
@@ -655,7 +655,7 @@ func _lag_refused_shots_restore(manager: DotCombatManager, rewinds: Array[float]
 	_done()
 
 
-## A stand-in for the DotNetBehaviour a game writes: plain properties, so GameSpice Combat names no GameSpice Net type.
+## A stand-in for the GSNetBehaviour a game writes: plain properties, so GameSpice Combat names no GameSpice Net type.
 class FakeBehaviour extends Object:
 	var net_health: int = 0
 	var net_armour: int = 0
@@ -665,7 +665,7 @@ class FakeBehaviour extends Object:
 func _test_net_sync() -> void:
 	_section("net sync")
 
-	var specs := DotCombatNetSync.specs()
+	var specs := GSCombatNetSync.specs()
 	# Three, not six: the slot, the magazine and the reserve moved to GameSpice Weapon's own
 	# sync when the weapon layer left this addon. A game with health and no weapons
 	# replicates three properties rather than six.
@@ -678,14 +678,14 @@ func _test_net_sync() -> void:
 			String(spec["property"])
 		)
 
-	var health := DotHealth.new()
+	var health := GSHealth.new()
 	health.max_health = 100.0
 	add_child(health)
 	health.health = 73.4
 	health.armour = 12.0
 
 	var behaviour := FakeBehaviour.new()
-	DotCombatNetSync.pull(health, behaviour)
+	GSCombatNetSync.pull(health, behaviour)
 
 	# Ceil, not round: a player on 0.4 health is alive, and rounding to zero shows a
 	# corpse's health bar on someone still shooting back.
@@ -694,13 +694,13 @@ func _test_net_sync() -> void:
 	_check(behaviour.net_alive, "alive replicates")
 
 	health.health = 0.4
-	DotCombatNetSync.pull(health, behaviour)
+	GSCombatNetSync.pull(health, behaviour)
 	_check(behaviour.net_health == 1, "a player on a sliver of health is not shown dead")
 
-	var receiver_health := DotHealth.new()
+	var receiver_health := GSHealth.new()
 	receiver_health.max_health = 100.0
 	add_child(receiver_health)
-	DotCombatNetSync.push(behaviour, receiver_health)
+	GSCombatNetSync.push(behaviour, receiver_health)
 	_close(receiver_health.health, 1.0, "received health is written straight through")
 
 	behaviour.free()

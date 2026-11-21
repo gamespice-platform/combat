@@ -1,7 +1,7 @@
-class_name DotDamageImmunity
+class_name GSDamageImmunity
 extends RefCounted
 
-## Which damage kinds each entity ignores, by [member DotDamageType.id].
+## Which damage kinds each entity ignores, by [member GSDamageType.id].
 ## Data a bridge writes once per spawn from a class profile; empty by default. The wildcard [constant ALL] covers every kind.
 
 const ALL := &"all"

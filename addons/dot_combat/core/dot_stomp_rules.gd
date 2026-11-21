@@ -1,4 +1,4 @@
-class_name DotStompRules
+class_name GSStompRules
 extends RefCounted
 ## The numbers of the head stomp (landing on a player's head hurts them), as [code]sv_stomp_*[/code] cvars.
 ## Off by default. Pure data, so a selftest and the server agree without a scene.
@@ -47,7 +47,7 @@ func cvar_specs() -> Array[Dictionary]:
 	return out
 
 
-## Registers the cvars through [param add] and follows them live; same shape as [method DotFallDamageRules.bind_cvars].
+## Registers the cvars through [param add] and follows them live; same shape as [method GSFallDamageRules.bind_cvars].
 func bind_cvars(add: Callable, flags: int = 0) -> Array:
 	var made: Array = []
 

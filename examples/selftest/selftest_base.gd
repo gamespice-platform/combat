@@ -8,8 +8,8 @@ var _failures := PackedStringArray()
 var _entered := 0
 var _completed := 0
 
-## A stand-in for GameSpice Server's DotConVar, which this addon may not name: what
-## [method DotCombatManager.bind_cvars] duck-types (a `changed` signal, `get_string`,
+## A stand-in for GameSpice Server's GSConVar, which this addon may not name: what
+## [method GSCombatManager.bind_cvars] duck-types (a `changed` signal, `get_string`,
 ## `with_range`), holding a value an operator set before the manager bound it.
 class FakeCvar extends RefCounted:
 	signal changed(old_value: String, new_value: String)
@@ -33,7 +33,7 @@ class FakeCvar extends RefCounted:
 		changed.emit(old, text)
 
 
-## Stands in for GameSpice Server's DotClientLink: the two members follow_cvars asks for.
+## Stands in for GameSpice Server's GSClientLink: the two members follow_cvars asks for.
 class FakeLink extends Node:
 	signal replicated_cvar_changed(cvar_name: String, value: String)
 	var replicated_cvars := {}
@@ -79,8 +79,8 @@ func _group(title: String) -> void:
 	print("%s" % title)
 
 
-func _bullet() -> DotDamageType:
-	var type := DotDamageType.make(&"bullet", "Bullet")
+func _bullet() -> GSDamageType:
+	var type := GSDamageType.make(&"bullet", "Bullet")
 	type.armour_share = 0.5
 	type.armour_wear = 1.0
 	type.falloff_start = 20.0
@@ -90,9 +90,9 @@ func _bullet() -> DotDamageType:
 
 
 ## A rifle shot, ready to resolve.
-## A [DotShot], not a weapon: this addon does not know what a weapon is.
-func _rifle_shot(attacker: int, tick: int, index: int) -> DotShot:
-	var shot := DotShot.make(&"rifle", attacker, tick, index)
+## A [GSShot], not a weapon: this addon does not know what a weapon is.
+func _rifle_shot(attacker: int, tick: int, index: int) -> GSShot:
+	var shot := GSShot.make(&"rifle", attacker, tick, index)
 	shot.damage = 25.0
 	shot.damage_type = _bullet()
 	shot.max_range = 200.0
@@ -102,8 +102,8 @@ func _rifle_shot(attacker: int, tick: int, index: int) -> DotShot:
 
 
 ## A rocket shot: no direct damage, a five-metre splash that hurts its own shooter.
-func _rocket_shot(type: DotDamageType, attacker: int, tick: int, index: int) -> DotShot:
-	var shot := DotShot.make(&"rocket", attacker, tick, index)
+func _rocket_shot(type: GSDamageType, attacker: int, tick: int, index: int) -> GSShot:
+	var shot := GSShot.make(&"rocket", attacker, tick, index)
 	shot.damage = 0.0
 	shot.damage_type = type
 	shot.splash_type = type
@@ -114,40 +114,40 @@ func _rocket_shot(type: DotDamageType, attacker: int, tick: int, index: int) -> 
 	return shot
 
 
-## A player: a body node with a [DotHealth] and a [DotHitboxSet] of three hitboxes.
+## A player: a body node with a [GSHealth] and a [GSHitboxSet] of three hitboxes.
 ## Built by hand so the whole fixture is readable here.
 func _make_player(position: Vector3, max_health: float = 100.0) -> Node3D:
 	var body := Node3D.new()
 	body.position = position
 
-	var health := DotHealth.new()
+	var health := GSHealth.new()
 	health.max_health = max_health
 	health.regen_per_second = 0.0
 	body.add_child(health)
 
-	var set_node := DotHitboxSet.new()
+	var set_node := GSHitboxSet.new()
 	set_node.bounds_offset = Vector3(0.0, 0.9, 0.0)
 	set_node.bounds_radius = 1.4
 
-	var head := DotHitbox.new()
-	head.group = DotHitGroup.HEAD
-	head.shape = DotHitbox.Shape.SPHERE
+	var head := GSHitbox.new()
+	head.group = GSHitGroup.HEAD
+	head.shape = GSHitbox.Shape.SPHERE
 	head.radius = 0.14
 	head.position = Vector3(0.0, 1.62, 0.0)
 	head.precedence = 10
 	set_node.add_child(head)
 
-	var chest := DotHitbox.new()
-	chest.group = DotHitGroup.CHEST
-	chest.shape = DotHitbox.Shape.CAPSULE
+	var chest := GSHitbox.new()
+	chest.group = GSHitGroup.CHEST
+	chest.shape = GSHitbox.Shape.CAPSULE
 	chest.radius = 0.28
 	chest.height = 1.1
 	chest.position = Vector3(0.0, 1.0, 0.0)
 	set_node.add_child(chest)
 
-	var legs := DotHitbox.new()
-	legs.group = DotHitGroup.LEG
-	legs.shape = DotHitbox.Shape.CAPSULE
+	var legs := GSHitbox.new()
+	legs.group = GSHitGroup.LEG
+	legs.shape = GSHitbox.Shape.CAPSULE
 	legs.radius = 0.22
 	legs.height = 0.9
 	legs.position = Vector3(0.0, 0.45, 0.0)
@@ -161,16 +161,16 @@ func _make_player(position: Vector3, max_health: float = 100.0) -> Node3D:
 	return body
 
 
-func _health_of(body: Node3D) -> DotHealth:
+func _health_of(body: Node3D) -> GSHealth:
 	for child in body.get_children():
-		if child is DotHealth:
+		if child is GSHealth:
 			return child
 	return null
 
 
-func _hitboxes_of(body: Node3D) -> DotHitboxSet:
+func _hitboxes_of(body: Node3D) -> GSHitboxSet:
 	for child in body.get_children():
-		if child is DotHitboxSet:
+		if child is GSHitboxSet:
 			return child
 	return null
 
@@ -183,12 +183,12 @@ func _clear_players() -> void:
 	_players.clear()
 
 
-func _make_manager(trace: DotTrace, rules: DotDamageRules) -> DotCombatManager:
-	var manager := DotCombatManager.new()
+func _make_manager(trace: GSTrace, rules: GSDamageRules) -> GSCombatManager:
+	var manager := GSCombatManager.new()
 	manager.register_service = false
 	manager.trace = trace
 	manager.rules = rules
-	manager.config = DotCombatConfig.new()
+	manager.config = GSCombatConfig.new()
 	manager.config.tick_rate = 60
 	add_child(manager)
 	return manager

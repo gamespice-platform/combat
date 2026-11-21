@@ -7,11 +7,11 @@ extends "res://examples/selftest/selftest_base.gd"
 func _test_limbs() -> void:
 	_section("limb tags")
 
-	var manager := _make_manager(DotTraceFlat.with_floor(0.0), DotDamageRules.new())
+	var manager := _make_manager(GSTraceFlat.with_floor(0.0), GSDamageRules.new())
 	var victim := _make_player(Vector3(0.0, 0.0, -10.0), 1000.0)
 	for box in _hitboxes_of(victim).get_children():
-		if box is DotHitbox:
-			box.limb = &"head" if box.group == DotHitGroup.HEAD else (&"leg" if box.group == DotHitGroup.LEG else &"")
+		if box is GSHitbox:
+			box.limb = &"head" if box.group == GSHitGroup.HEAD else (&"leg" if box.group == GSHitGroup.LEG else &"")
 	_hitboxes_of(victim).register_with(manager, 2)
 	manager.register_health(2, _health_of(victim))
 	manager.limb_min_damage = {"default": 10.0, "leg": 40.0}
@@ -64,12 +64,12 @@ func _test_limbs() -> void:
 
 	manager.limb_min_damage = {}
 	_check(is_zero_approx(manager.limb_threshold(&"head")), "no thresholds means every tagged hit counts")
-	var untagged := DotHitbox.new()
+	var untagged := GSHitbox.new()
 	_check(untagged.limb == &"", "an untagged hitbox has no limb")
 	_check(sink.calls.size() == 2, "the sink saw exactly the counted hits")
-	var tagged_shot := DotShot.make(&"rifle", 1, 1, 0)
+	var tagged_shot := GSShot.make(&"rifle", 1, 1, 0)
 	tagged_shot.set_meta(&"quickscope", true)
-	_check(tagged_shot.describe()["meta"].get(&"quickscope", false) == true and DotShot.make(&"x", 1, 1, 0).describe()["meta"].is_empty(), "describe carries the shooter's shot meta")
+	_check(tagged_shot.describe()["meta"].get(&"quickscope", false) == true and GSShot.make(&"x", 1, 1, 0).describe()["meta"].is_empty(), "describe carries the shooter's shot meta")
 	_check(untagged.describe().has("limb"), "describe names the limb")
 	untagged.free()
 
@@ -116,8 +116,8 @@ class FakeState extends RefCounted:
 	var surface: StringName = &""
 
 
-func _fall_curve_checks() -> DotFallDamageRules:
-	var rules := DotFallDamageRules.new()
+func _fall_curve_checks() -> GSFallDamageRules:
+	var rules := GSFallDamageRules.new()
 	_check(rules.damage_for(40.0) == 0.0, "off by default: a huge fall does nothing")
 	rules.enabled = true
 	rules.threshold = 10.0
@@ -139,12 +139,12 @@ func _fall_curve_checks() -> DotFallDamageRules:
 	return rules
 
 
-func _fall_cvar_checks() -> DotFallDamageRules:
-	var held := DotFallDamageRules.new()
+func _fall_cvar_checks() -> GSFallDamageRules:
+	var held := GSFallDamageRules.new()
 	var made := held.bind_cvars(func(n: String, v: String, _d: String, f: int) -> Object:
 		var cv := FakeCvar.new()
 		cv.cvar_name = n
-		cv.value = "1" if n == DotFallDamageRules.CVAR_ENABLED else v
+		cv.value = "1" if n == GSFallDamageRules.CVAR_ENABLED else v
 		cv.flags = f
 		return cv)
 	_check(made.size() == 13 and held.enabled, "thirteen cvars; a value set before binding is read back")
@@ -152,11 +152,11 @@ func _fall_cvar_checks() -> DotFallDamageRules:
 	_check(not held.enabled, "sv_falldamage 0 turns it off live")
 	made[1].set_value("8")
 	_close(held.threshold, 8.0, "sv_falldamage_threshold is live")
-	_check(not held.set_cvar(DotFallDamageRules.CVAR_SCALE, "lots"), "a non-number is refused")
+	_check(not held.set_cvar(GSFallDamageRules.CVAR_SCALE, "lots"), "a non-number is refused")
 	return held
 
 
-func _fall_surface_and_legs(rules: DotFallDamageRules, fall: DotFallDamage, ctl: FakeController, health: DotHealth) -> void:
+func _fall_surface_and_legs(rules: GSFallDamageRules, fall: GSFallDamage, ctl: FakeController, health: GSHealth) -> void:
 	var soft := FakeSurface.new()
 	soft.fall_damping = 0.5
 	var set := FakeSurfaceSet.new()
@@ -183,7 +183,7 @@ func _fall_surface_and_legs(rules: DotFallDamageRules, fall: DotFallDamage, ctl:
 func _test_stomp() -> void:
 	_section("stomp: head test, speed floor, teams, cooldown, cvars")
 
-	var stomp := DotStomp.new()
+	var stomp := GSStomp.new()
 	var hulls: Array = [{"id": 2, "feet": Vector3(0, 0, 0), "height": 1.8, "radius": 0.35, "team": 1}]
 	var on_head := Vector3(0.2, 1.9, 0)
 	_check(stomp.find(1, on_head, 0.35, 12.0, 0, hulls, 10, 60) == 0, "off by default: nobody is stomped")
@@ -198,11 +198,11 @@ func _test_stomp() -> void:
 	_check(stomp.find(4, on_head, 0.35, 12.0, 1, hulls, 10, 60) == 0, "a teammate is safe by default")
 	stomp.rules.same_team = true
 	_check(stomp.find(5, on_head, 0.35, 12.0, 1, hulls, 10, 60) == 2, "unless the rules allow same-team stomps")
-	_close(stomp.amount(), DotStomp.LETHAL_DAMAGE, "a stomp kills outright by default")
+	_close(stomp.amount(), GSStomp.LETHAL_DAMAGE, "a stomp kills outright by default")
 	stomp.rules.damage = 30.0
 	_close(stomp.amount(), 30.0, "or takes the amount the rules name")
 
-	var rules := DotStompRules.new()
+	var rules := GSStompRules.new()
 	var made := rules.bind_cvars(func(n: String, v: String, _d: String, f: int) -> Object:
 		var cv := FakeCvar.new()
 		cv.cvar_name = n
@@ -223,8 +223,8 @@ func _test_fall_damage() -> void:
 
 	var held := _fall_cvar_checks()
 
-	var manager := _make_manager(DotTraceFlat.with_floor(0.0), DotDamageRules.new())
-	var health := DotHealth.new()
+	var manager := _make_manager(GSTraceFlat.with_floor(0.0), GSDamageRules.new())
+	var health := GSHealth.new()
 	health.max_health = 100.0
 	health.health = 100.0
 	add_child(health)
@@ -232,14 +232,14 @@ func _test_fall_damage() -> void:
 	var ctl := FakeController.new()
 	ctl.name = "Ctl"
 	add_child(ctl)
-	var fall := DotFallDamage.new()
+	var fall := GSFallDamage.new()
 	fall.rules = rules
 	fall.rules.enabled = true
 	fall.victim = 7
-	fall.controller = DotNodeRef.of_path(ctl.get_path())
-	fall.combat = DotNodeRef.of_path(manager.get_path())
-	fall.controller.mode = DotNodeRef.Mode.ABSOLUTE
-	fall.combat.mode = DotNodeRef.Mode.ABSOLUTE
+	fall.controller = GSNodeRef.of_path(ctl.get_path())
+	fall.combat = GSNodeRef.of_path(manager.get_path())
+	fall.controller.mode = GSNodeRef.Mode.ABSOLUTE
+	fall.combat.mode = GSNodeRef.Mode.ABSOLUTE
 	add_child(fall)
 	_check(fall.describe()["attached"], "the node refs resolved and it attached")
 
@@ -259,9 +259,9 @@ func _test_fall_damage() -> void:
 	rules.lethal_speed = 30.0
 	_close(rules.damage_for(29.0), 38.0, "just under the lethal speed it is the curve")
 	_check(rules.damage_for(30.0) >= 1000.0, "at the lethal speed it kills")
-	_check(held.set_cvar(DotFallDamageRules.CVAR_LETHAL, "25") and held.lethal_speed == 25.0, "sv_falldamage_lethal is live")
-	_check(held.set_cvar(DotFallDamageRules.CVAR_POWER, "2") and held.curve_power == 2.0, "sv_falldamage_power is live")
-	_check(held.set_cvar(DotFallDamageRules.CVAR_MAX, "40") and held.max_damage == 40.0, "sv_falldamage_max is live")
+	_check(held.set_cvar(GSFallDamageRules.CVAR_LETHAL, "25") and held.lethal_speed == 25.0, "sv_falldamage_lethal is live")
+	_check(held.set_cvar(GSFallDamageRules.CVAR_POWER, "2") and held.curve_power == 2.0, "sv_falldamage_power is live")
+	_check(held.set_cvar(GSFallDamageRules.CVAR_MAX, "40") and held.max_damage == 40.0, "sv_falldamage_max is live")
 	_check(held.set_cvar("sv_falldamage_absorb_ladder", "0") and not held.absorbs[&"ladder"], "an absorb cvar turns one off")
 	_check(not held.set_cvar("sv_falldamage_absorb_weather", "1"), "an unknown absorb context is refused")
 
@@ -297,7 +297,7 @@ class ErrorCatcher extends Logger:
 func _test_freed_hitbox() -> void:
 	_section("a hitbox freed under a registered set")
 
-	var manager := _make_manager(DotTraceFlat.with_floor(0.0), DotDamageRules.new())
+	var manager := _make_manager(GSTraceFlat.with_floor(0.0), GSDamageRules.new())
 	var victim := _make_player(Vector3(0.0, 0.0, -10.0), 1000.0)
 	var set_node := _hitboxes_of(victim)
 	set_node.register_with(manager, 2)
@@ -329,7 +329,7 @@ func _test_freed_hitbox() -> void:
 	_done()
 
 
-func _zone_shot(manager: DotCombatManager, seq: int, at: Vector3) -> DotDamage:
+func _zone_shot(manager: GSCombatManager, seq: int, at: Vector3) -> GSDamage:
 	var shot := _rifle_shot(1, 200 + seq, seq)
 	shot.origin = at
 	shot.direction = Vector3.FORWARD
@@ -341,20 +341,20 @@ func _zone_shot(manager: DotCombatManager, seq: int, at: Vector3) -> DotDamage:
 func _test_hitzones() -> void:
 	_section("hitzones")
 
-	var rules := DotDamageRules.new()
-	var manager := _make_manager(DotTraceFlat.with_floor(0.0), rules)
+	var rules := GSDamageRules.new()
+	var manager := _make_manager(GSTraceFlat.with_floor(0.0), rules)
 	var victim := _make_player(Vector3(0.0, 0.0, -10.0), 100000.0)
 	var set_node := _hitboxes_of(victim)
-	var neck := DotHitbox.new()
-	neck.group = DotHitGroup.NECK
-	neck.shape = DotHitbox.Shape.SPHERE
+	var neck := GSHitbox.new()
+	neck.group = GSHitGroup.NECK
+	neck.shape = GSHitbox.Shape.SPHERE
 	neck.radius = 0.4
 	neck.position = Vector3(0.0, 1.5, 0.0)
 	neck.precedence = 20
 	set_node.add_child(neck)
-	var foot := DotHitbox.new()
-	foot.group = DotHitGroup.FOOT
-	foot.shape = DotHitbox.Shape.SPHERE
+	var foot := GSHitbox.new()
+	foot.group = GSHitGroup.FOOT
+	foot.shape = GSHitbox.Shape.SPHERE
 	foot.radius = 0.3
 	foot.position = Vector3(0.0, 0.05, 0.0)
 	foot.precedence = 20
@@ -366,24 +366,24 @@ func _test_hitzones() -> void:
 	var chest := _zone_shot(manager, 1, Vector3(0.0, 1.0, 0.0))
 	var base := chest.amount
 	var off := _zone_shot(manager, 2, Vector3(0.0, 1.45, 0.0))
-	_check(off.hit_group == DotHitGroup.NECK, "a neck box reports the neck zone", str(off.hit_group))
+	_check(off.hit_group == GSHitGroup.NECK, "a neck box reports the neck zone", str(off.hit_group))
 	_close(off.amount, base, "zones off: the neck counts as chest")
 	var leg_off := _zone_shot(manager, 3, Vector3(0.0, 0.05, 0.0))
 	var leg_ref := _zone_shot(manager, 4, Vector3(0.0, 0.5, 0.0))
 	_close(leg_off.amount, leg_ref.amount, "zones off: the foot counts as leg")
-	var belly := DotHitbox.new()
-	belly.group = DotHitGroup.STOMACH
-	belly.shape = DotHitbox.Shape.SPHERE
+	var belly := GSHitbox.new()
+	belly.group = GSHitGroup.STOMACH
+	belly.shape = GSHitbox.Shape.SPHERE
 	belly.radius = 0.3
 	belly.position = Vector3(0.0, 0.7, 0.0)
 	belly.precedence = 20
 	set_node.add_child(belly)
 	set_node.refresh()
 	var belly_off := _zone_shot(manager, 20, Vector3(0.0, 0.7, 0.0))
-	_check(belly_off.hit_group == DotHitGroup.STOMACH, "a stomach box reports the stomach zone", str(belly_off.hit_group))
+	_check(belly_off.hit_group == GSHitGroup.STOMACH, "a stomach box reports the stomach zone", str(belly_off.hit_group))
 	_close(belly_off.amount, base, "zones off: the stomach counts as chest, no x1.25")
 
-	_check(manager.set_cvar(DotCombatManager.CVAR_HITZONES, "1") and rules.hitzones, "mp_hitzones turns zones on")
+	_check(manager.set_cvar(GSCombatManager.CVAR_HITZONES, "1") and rules.hitzones, "mp_hitzones turns zones on")
 	_close(_zone_shot(manager, 5, Vector3(0.0, 1.45, 0.0)).amount, base * 2.0, "zones on: neck takes its own multiplier")
 	_close(_zone_shot(manager, 6, Vector3(0.0, 0.05, 0.0)).amount, leg_ref.amount * 0.5 / 0.75, "zones on: foot takes its own multiplier")
 	_close(_zone_shot(manager, 21, Vector3(0.0, 0.7, 0.0)).amount, base * 1.25, "zones on: the stomach takes its own multiplier")
@@ -392,8 +392,8 @@ func _test_hitzones() -> void:
 	_check(data == 2 and is_equal_approx(manager.resolver.hit_groups.multiplier(&"neck"), 3.0), "data overrides multipliers and skips non-numbers")
 	_close(_zone_shot(manager, 7, Vector3(0.0, 1.45, 0.0)).amount, base * 3.0, "and the next shot uses them")
 
-	_check(chest.context.get(DotHitzone.CONTEXT_SIDE) == DotHitzone.SIDE_MIDDLE, "a centred hit is middle")
-	_check(_zone_shot(manager, 8, Vector3(0.2, 1.0, 0.0)).context.get(DotHitzone.CONTEXT_SIDE) == DotHitzone.SIDE_RIGHT, "a hit right of centre is right")
-	_check(_zone_shot(manager, 9, Vector3(-0.2, 1.0, 0.0)).context.get(DotHitzone.CONTEXT_SIDE) == DotHitzone.SIDE_LEFT, "and left of centre is left")
-	_check(DotHitzone.coarse(&"hand") == DotHitGroup.ARM and DotHitzone.coarse(DotHitGroup.HEAD) == DotHitGroup.HEAD, "coarse folds hand to arm and leaves head")
+	_check(chest.context.get(GSHitzone.CONTEXT_SIDE) == GSHitzone.SIDE_MIDDLE, "a centred hit is middle")
+	_check(_zone_shot(manager, 8, Vector3(0.2, 1.0, 0.0)).context.get(GSHitzone.CONTEXT_SIDE) == GSHitzone.SIDE_RIGHT, "a hit right of centre is right")
+	_check(_zone_shot(manager, 9, Vector3(-0.2, 1.0, 0.0)).context.get(GSHitzone.CONTEXT_SIDE) == GSHitzone.SIDE_LEFT, "and left of centre is left")
+	_check(GSHitzone.coarse(&"hand") == GSHitGroup.ARM and GSHitzone.coarse(GSHitGroup.HEAD) == GSHitGroup.HEAD, "coarse folds hand to arm and leaves head")
 	_done()

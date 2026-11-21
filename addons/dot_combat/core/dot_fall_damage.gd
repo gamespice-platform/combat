@@ -1,18 +1,18 @@
-class_name DotFallDamage
+class_name GSFallDamage
 extends Node
 ## Turns a controller's landing impact (any node with a [code]landed(impact)[/code] signal) into damage; one per player.
-## Goes through [method DotCombatManager.apply_damage], which applies only on the authority, so a client never hurts anyone.
+## Goes through [method GSCombatManager.apply_damage], which applies only on the authority, so a client never hurts anyone.
 
 const CHANNEL := "combat.fall"
 
-## The shared numbers. Assign the game's one [DotFallDamageRules].
-var rules: DotFallDamageRules = null
+## The shared numbers. Assign the game's one [GSFallDamageRules].
+var rules: GSFallDamageRules = null
 
 ## The controller to listen to.
-@export var controller: DotNodeRef = DotNodeRef.new()
+@export var controller: GSNodeRef = GSNodeRef.new()
 
 ## The combat manager to apply damage through.
-@export var combat: DotNodeRef = DotNodeRef.new()
+@export var combat: GSNodeRef = GSNodeRef.new()
 
 ## Entity id of the player taking the damage.
 var victim: int = 0
@@ -24,16 +24,16 @@ signal legs_broken(seconds: float, speed_scale: float)
 ## Optional [code]func() -> bool[/code]: true while the host stands in water.
 var in_water: Callable = Callable()
 
-## Optional [code]func() -> bool[/code] per [constant DotFallDamageRules.CONTEXTS] name
+## Optional [code]func() -> bool[/code] per [constant GSFallDamageRules.CONTEXTS] name
 ## (ladder, vehicle, noclip, protected, water): true while that situation applies. Whether it
-## absorbs the landing is the rules' [member DotFallDamageRules.absorbs].
+## absorbs the landing is the rules' [member GSFallDamageRules.absorbs].
 var context_checks: Dictionary = {}
 
 ## Damage type id; the game registers it ([code]fall[/code] by default).
 var damage_type_id: StringName = &"fall"
 
 var _controller: Node = null
-var _combat: DotCombatManager = null
+var _combat: GSCombatManager = null
 var landings: int = 0
 var damaged: int = 0
 var last_damage: float = 0.0
@@ -46,10 +46,10 @@ func _ready() -> void:
 ## Resolves both refs and connects. False (and a warning) when either is missing.
 func attach() -> bool:
 	_controller = controller.resolve_or_null(self, CHANNEL)
-	_combat = combat.resolve_or_null(self, CHANNEL) as DotCombatManager
+	_combat = combat.resolve_or_null(self, CHANNEL) as GSCombatManager
 
 	if _controller == null or _combat == null or not _controller.has_signal(&"landed"):
-		DotLog.warn(CHANNEL, "fall damage has no controller or combat manager; inert", {})
+		GSLog.warn(CHANNEL, "fall damage has no controller or combat manager; inert", {})
 		return false
 
 	if not _controller.is_connected(&"landed", on_landed):
@@ -59,7 +59,7 @@ func attach() -> bool:
 
 
 ## A landing at [param impact] m/s. Public so a host without the signal can call it.
-func on_landed(impact: float) -> DotDamage:
+func on_landed(impact: float) -> GSDamage:
 	landings += 1
 
 	if rules == null or _combat == null or not _combat.is_authority or victim == 0:
@@ -85,11 +85,11 @@ func on_landed(impact: float) -> DotDamage:
 	if amount <= 0.0:
 		return null
 
-	var hit := DotDamage.make(0, victim, amount, _combat.damage_type(damage_type_id))
+	var hit := GSDamage.make(0, victim, amount, _combat.damage_type(damage_type_id))
 	hit.context = {"why": &"fall", "impact": impact}
 	damaged += 1
 	last_damage = amount
-	DotLog.debug(CHANNEL, "fall damage", {"victim": victim, "impact": impact, "amount": amount})
+	GSLog.debug(CHANNEL, "fall damage", {"victim": victim, "impact": impact, "amount": amount})
 	var result := _combat.apply_damage(hit)
 
 	if rules.legs_seconds > 0.0 and not (result != null and result.refused):

@@ -1,4 +1,4 @@
-class_name DotHitGroup
+class_name GSHitGroup
 extends RefCounted
 
 ## The named regions a shot can land in, and the multiplier each carries.
@@ -28,8 +28,8 @@ const GENERIC := &"generic"
 var _multipliers: Dictionary = {}
 
 
-static func defaults() -> DotHitGroup:
-	var groups := DotHitGroup.new()
+static func defaults() -> GSHitGroup:
+	var groups := GSHitGroup.new()
 	groups.set_multiplier(HEAD, 4.0)
 	groups.set_multiplier(CHEST, 1.0)
 	groups.set_multiplier(STOMACH, 1.25)

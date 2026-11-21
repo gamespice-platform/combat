@@ -1,8 +1,8 @@
 @tool
-class_name DotHitboxSet
+class_name GSHitboxSet
 extends Node3D
 
-## Every [DotHitbox] belonging to one entity, tested as a unit.
+## Every [GSHitbox] belonging to one entity, tested as a unit.
 ##
 ## Sits above the hitboxes in the scene — usually on the model root, so the whole set
 ## follows the animation without anything having to keep transforms in step. Testing
@@ -10,7 +10,7 @@ extends Node3D
 ## between a head inside a torso is decided once, in one place, the same way on every
 ## machine.
 ##
-## Registering with a [DotCombatManager] is what makes an entity shootable at all:
+## Registering with a [GSCombatManager] is what makes an entity shootable at all:
 ## the manager keeps the set list that a trace walks. An entity with hitboxes and no
 ## registration is invisible to every weapon in the game and nothing reports it, which
 ## is why [method register_with] logs when it finds no hitboxes.
@@ -18,7 +18,7 @@ extends Node3D
 const CHANNEL := "combat.hitboxes"
 
 ## The entity these belong to. Defaults to this node's parent.
-@export var owner_ref: DotNodeRef = null
+@export var owner_ref: GSNodeRef = null
 
 ## Skip the whole set. For a dead body, a spectator, or an entity out of play.
 @export var enabled: bool = true
@@ -32,7 +32,7 @@ const CHANNEL := "combat.hitboxes"
 ## Vertical offset of that sphere's centre from this node, in local space.
 @export var bounds_offset: Vector3 = Vector3(0.0, 0.9, 0.0)
 
-var _hitboxes: Array[DotHitbox] = []
+var _hitboxes: Array[GSHitbox] = []
 var _owner: Node = null
 var _manager: Node = null
 
@@ -63,16 +63,16 @@ func refresh() -> void:
 
 func _collect(node: Node) -> void:
 	for child in node.get_children():
-		if child is DotHitbox:
+		if child is GSHitbox:
 			_hitboxes.append(child)
 		# Nested sets belong to a different entity — a turret mounted on a vehicle —
 		# so the walk stops rather than stealing their boxes.
-		if child is DotHitboxSet:
+		if child is GSHitboxSet:
 			continue
 		_collect(child)
 
 
-func hitboxes() -> Array[DotHitbox]:
+func hitboxes() -> Array[GSHitbox]:
 	_prune()
 	return _hitboxes
 
@@ -91,9 +91,9 @@ func entity_owner() -> Node:
 	return _owner
 
 
-## Registers with a [DotCombatManager] so traces can find this entity.
+## Registers with a [GSCombatManager] so traces can find this entity.
 ##
-## [param manager] is typed as [Node] rather than as [DotCombatManager] only so that
+## [param manager] is typed as [Node] rather than as [GSCombatManager] only so that
 ## this file has no ordering requirement against it; the call is a plain method call
 ## either way.
 func register_with(manager: Node, entity_id: int) -> void:
@@ -106,7 +106,7 @@ func register_with(manager: Node, entity_id: int) -> void:
 	if _hitboxes.is_empty():
 		# Almost always a scene mistake: the set was added but the boxes were parented
 		# somewhere else. Silence here means an entity nothing can shoot.
-		DotLog.warn(
+		GSLog.warn(
 			CHANNEL,
 			"hitbox set registered with no hitboxes under it",
 			{"node": String(get_path()), "entity": entity_id}
@@ -120,16 +120,16 @@ func register_with(manager: Node, entity_id: int) -> void:
 ##
 ## Nearest wins. Ties — which nested hitboxes produce constantly, because a head
 ## capsule inside a torso box shares a surface — go to the higher
-## [member DotHitbox.precedence], then to the higher damage scale. Leaving the tie to
+## [member GSHitbox.precedence], then to the higher damage scale. Leaving the tie to
 ## child order gives a game where headshots land about half the time and nobody can
 ## say why.
 func intersect_ray(
 	from: Vector3,
 	direction: Vector3,
 	max_distance: float
-) -> DotHitbox.Hit:
+) -> GSHitbox.Hit:
 	_prune()
-	var miss := DotHitbox.Hit.new()
+	var miss := GSHitbox.Hit.new()
 
 	if not enabled or _hitboxes.is_empty():
 		return miss
@@ -137,7 +137,7 @@ func intersect_ray(
 	if not _ray_hits_bounds(from, direction, max_distance):
 		return miss
 
-	var best: DotHitbox.Hit = miss
+	var best: GSHitbox.Hit = miss
 
 	for box in _hitboxes:
 		var hit := box.intersect_ray(from, direction, max_distance)
@@ -182,8 +182,8 @@ func overlaps_sphere(centre: Vector3, radius: float) -> bool:
 
 ## Whether [param point] is inside any enabled hitbox of this set.
 ##
-## What [method DotCombatManager.pass_through_sets] asks of a shot's muzzle: a ray that
-## starts inside a hitbox hits it at distance zero (see [DotHitbox]), so "does this body
+## What [method GSCombatManager.pass_through_sets] asks of a shot's muzzle: a ray that
+## starts inside a hitbox hits it at distance zero (see [GSHitbox]), so "does this body
 ## hold the muzzle" is the question that decides whether a shot can see past it at all.
 func contains_point(point: Vector3) -> bool:
 	_prune()

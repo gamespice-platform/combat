@@ -5,7 +5,7 @@ extends "selftest/selftest_base.gd"
 ## Run: godot --headless --path . res://examples/trace_bench.tscn -- --n=350 --rounds=300
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	_run.call_deferred()
 
 
@@ -18,8 +18,8 @@ func _run() -> void:
 		elif arg.begins_with("--rounds="):
 			rounds = int(arg.substr(9))
 
-	var rules := DotDamageRules.new()
-	var manager := _make_manager(DotTraceFlat.with_floor(0.0), rules)
+	var rules := GSDamageRules.new()
+	var manager := _make_manager(GSTraceFlat.with_floor(0.0), rules)
 	manager.resolver.team_of = func(id: int) -> int: return 1 if id % 3 == 0 else 2
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 77

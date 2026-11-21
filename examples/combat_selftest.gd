@@ -24,7 +24,7 @@ const SECTIONS := 35
 
 
 func _ready() -> void:
-	DotLog.set_level(DotLog.Level.ERROR)
+	GSLog.set_level(GSLog.Level.ERROR)
 	_run.call_deferred()
 
 
@@ -112,7 +112,7 @@ func _test_damage_type() -> void:
 	# clamp is what stops that becoming more than full damage.
 	_close(type.falloff_scale(-5.0), 1.0, "a negative distance is clamped, not extrapolated")
 
-	var flat := DotDamageType.make(&"flat")
+	var flat := GSDamageType.make(&"flat")
 	_close(flat.falloff_scale(1000.0), 1.0, "no falloff configured means no falloff")
 	_done()
 
@@ -120,10 +120,10 @@ func _test_damage_type() -> void:
 func _test_hit_groups() -> void:
 	_section("hit groups")
 
-	var groups := DotHitGroup.defaults()
+	var groups := GSHitGroup.defaults()
 
-	_close(groups.multiplier(DotHitGroup.HEAD), 4.0, "head multiplier")
-	_close(groups.multiplier(DotHitGroup.LEG), 0.75, "leg multiplier")
+	_close(groups.multiplier(GSHitGroup.HEAD), 4.0, "head multiplier")
+	_close(groups.multiplier(GSHitGroup.LEG), 0.75, "leg multiplier")
 
 	# The important one: a group nobody registered does normal damage. A typo costing
 	# full damage is survivable; a typo costing none is a weapon that does nothing.
@@ -139,8 +139,8 @@ func _test_hit_groups() -> void:
 	_check(cvars.size() == 4 and made.has("t_head_mult") and made["t_head_mult"][1] == "4.0", "hit zone cvars carry the prefix and the table's default")
 	(made["t_head_mult"][0] as FakeCvar).changed.emit("4.0", "6")
 	(made["t_leg_mult"][0] as FakeCvar).changed.emit("0.75", "-3")
-	_close(groups.multiplier(DotHitGroup.HEAD), 6.0, "a changed cvar sets the head multiplier")
-	_close(groups.multiplier(DotHitGroup.LEG), 0.0, "and never below zero")
+	_close(groups.multiplier(GSHitGroup.HEAD), 6.0, "a changed cvar sets the head multiplier")
+	_close(groups.multiplier(GSHitGroup.LEG), 0.0, "and never below zero")
 	_done()
 
 
@@ -157,21 +157,21 @@ class FakeCvar extends RefCounted:
 func _test_health() -> void:
 	_section("health and armour")
 
-	var health := DotHealth.new()
+	var health := GSHealth.new()
 	health.max_health = 100.0
 	health.max_armour = 100.0
 	add_child(health)
 
 	var type := _bullet()
 
-	var d1 := DotDamage.make(1, 2, 40.0, type)
+	var d1 := GSDamage.make(1, 2, 40.0, type)
 	health.apply(d1)
 	_close(health.health, 60.0, "damage with no armour comes straight off health")
 	_close(d1.health_lost, 40.0, "the event records what actually landed")
 	_check(not d1.lethal, "a survivable hit is not lethal")
 
 	health.add_armour(100.0)
-	var d2 := DotDamage.make(1, 2, 40.0, type)
+	var d2 := GSDamage.make(1, 2, 40.0, type)
 	health.apply(d2)
 	_close(d2.armour_absorbed, 20.0, "armour absorbs its share")
 	_close(health.armour, 80.0, "armour wears by the absorbed amount at wear 1")
@@ -179,29 +179,29 @@ func _test_health() -> void:
 
 	# Armour that runs out mid-hit must not absorb more than it has.
 	health.armour = 5.0
-	var d3 := DotDamage.make(1, 2, 40.0, type)
+	var d3 := GSDamage.make(1, 2, 40.0, type)
 	health.apply(d3)
 	_close(d3.armour_absorbed, 5.0, "armour absorbs no more than it holds")
 	_close(health.armour, 0.0, "and is then gone")
 
-	var lethal := DotDamage.make(1, 2, 1000.0, type)
+	var lethal := GSDamage.make(1, 2, 1000.0, type)
 	health.apply(lethal)
 	_check(lethal.lethal, "a fatal hit is marked lethal")
 	_check(not health.alive, "and the victim is dead")
 	_close(health.health, 0.0, "health floors at zero rather than going negative")
 
 	# Buddha: hurt, never killed, and the event says what was really lost.
-	var buddha := DotHealth.new()
+	var buddha := GSHealth.new()
 	buddha.cannot_die = true
 	add_child(buddha)
-	var nearly := DotDamage.make(1, 2, 1000.0, type)
+	var nearly := GSDamage.make(1, 2, 1000.0, type)
 	buddha.apply(nearly)
 	_check(buddha.alive and not nearly.lethal, "cannot_die takes a fatal hit and survives it")
 	_close(buddha.health, 1.0, "at its last stand")
 	_close(nearly.health_lost, 99.0, "and the event records only what was lost")
 	buddha.queue_free()
 
-	var posthumous := DotDamage.make(1, 2, 10.0, type)
+	var posthumous := GSDamage.make(1, 2, 10.0, type)
 	health.apply(posthumous)
 	_check(posthumous.refused, "damage to a corpse is refused")
 
@@ -217,15 +217,15 @@ func _test_health() -> void:
 	_done()
 
 
-func _health_timed(health: DotHealth, type: DotDamageType) -> void:
+func _health_timed(health: GSHealth, type: GSDamageType) -> void:
 	# Spawn protection, which is counted in ticks so a replay reaches the same answer.
 	health.spawn_protection_ticks = 60
 	health.reset(1000)
-	var protected := DotDamage.make(1, 2, 50.0, type)
+	var protected := GSDamage.make(1, 2, 50.0, type)
 	protected.tick = 1030
 	health.apply(protected)
 	_check(protected.refused, "spawn protection refuses damage")
-	var after := DotDamage.make(1, 2, 50.0, type)
+	var after := GSDamage.make(1, 2, 50.0, type)
 	after.tick = 1060
 	health.apply(after)
 	_check(not after.refused, "and expires on schedule")
@@ -253,7 +253,7 @@ func _health_timed(health: DotHealth, type: DotDamageType) -> void:
 	health.regen_per_second = 10.0
 	health.regen_delay_sec = 1.0
 	health.set_tick_rate(60)
-	var hurt := DotDamage.make(1, 2, 50.0, type)
+	var hurt := GSDamage.make(1, 2, 50.0, type)
 	hurt.tick = 3000
 	health.apply(hurt)
 	health.tick(3030, 0.5)
@@ -270,33 +270,33 @@ func _test_spread_determinism() -> void:
 
 	var forward := Vector3.FORWARD
 
-	var a := DotSpread.cone(forward, 5.0, 42, 1000, 3, 0)
-	var b := DotSpread.cone(forward, 5.0, 42, 1000, 3, 0)
+	var a := GSSpread.cone(forward, 5.0, 42, 1000, 3, 0)
+	var b := GSSpread.cone(forward, 5.0, 42, 1000, 3, 0)
 	_check(a == b, "the same shot scatters identically", "%s vs %s" % [a, b])
 
 	# The whole reason this exists: a client and a server must agree, and a
 	# reconciling client replays the same tick many times.
-	var replayed := DotSpread.cone(forward, 5.0, 42, 1000, 3, 0)
+	var replayed := GSSpread.cone(forward, 5.0, 42, 1000, 3, 0)
 	_check(a == replayed, "and identically again on a replay")
 
-	var next_tick := DotSpread.cone(forward, 5.0, 42, 1001, 3, 0)
+	var next_tick := GSSpread.cone(forward, 5.0, 42, 1001, 3, 0)
 	_check(a != next_tick, "a different tick scatters differently")
 
-	var next_pellet := DotSpread.cone(forward, 5.0, 42, 1000, 3, 1)
+	var next_pellet := GSSpread.cone(forward, 5.0, 42, 1000, 3, 1)
 	_check(a != next_pellet, "a different pellet scatters differently")
 
-	var other_player := DotSpread.cone(forward, 5.0, 43, 1000, 3, 0)
+	var other_player := GSSpread.cone(forward, 5.0, 43, 1000, 3, 0)
 	_check(a != other_player, "a different shooter scatters differently")
 
 	_check(
-		DotSpread.cone(forward, 0.0, 1, 1, 1, 1) == forward,
+		GSSpread.cone(forward, 0.0, 1, 1, 1, 1) == forward,
 		"zero spread is exactly the aim direction"
 	)
 
 	# Every pellet must stay inside the stated cone, and the cone must actually be
 	# filled — in angle *and* in azimuth.
 	#
-	# The azimuth half of this is not academic. DotSpread.unit() once shifted by 40
+	# The azimuth half of this is not academic. GSSpread.unit() once shifted by 40
 	# rather than 39, which left it 23 bits of a 24-bit range and so returned values in
 	# [0, 0.5) only. Every pattern was a half-moon on one side of the aim, and the cone
 	# reached 1/sqrt(2) of its stated angle. Nothing failed; the shotgun simply threw
@@ -307,7 +307,7 @@ func _test_spread_determinism() -> void:
 	var up := Vector3.UP
 
 	for pellet in range(600):
-		var direction := DotSpread.cone(forward, 3.0, 7, 500, 1, pellet)
+		var direction := GSSpread.cone(forward, 3.0, 7, 500, 1, pellet)
 		worst = maxf(worst, rad_to_deg(forward.angle_to(direction)))
 
 		var offset := direction - forward * direction.dot(forward)
@@ -338,8 +338,8 @@ func _test_spread_determinism() -> void:
 func _spread_poles_and_fixed(forward: Vector3) -> void:
 	# Straight up is the case a fixed up-vector basis gets wrong: every shot fired at
 	# the sky comes out along one line.
-	var up_a := DotSpread.cone(Vector3.UP, 4.0, 1, 1, 1, 0)
-	var up_b := DotSpread.cone(Vector3.UP, 4.0, 1, 1, 1, 1)
+	var up_a := GSSpread.cone(Vector3.UP, 4.0, 1, 1, 1, 0)
+	var up_b := GSSpread.cone(Vector3.UP, 4.0, 1, 1, 1, 1)
 	_check(up_a != up_b, "shots fired straight up still scatter")
 	_check(
 		rad_to_deg(Vector3.UP.angle_to(up_a)) <= 4.0001,
@@ -348,9 +348,9 @@ func _spread_poles_and_fixed(forward: Vector3) -> void:
 
 	# The fixed pattern must put one pellet dead centre, or a shotgun cannot hit
 	# anything at range.
-	var centre := DotSpread.fixed_cone(forward, 5.0, 0, 9)
+	var centre := GSSpread.fixed_cone(forward, 5.0, 0, 9)
 	_check(centre == forward, "a fixed pattern has a centre pellet")
-	var ring := DotSpread.fixed_cone(forward, 5.0, 4, 9)
+	var ring := GSSpread.fixed_cone(forward, 5.0, 4, 9)
 	_close(rad_to_deg(forward.angle_to(ring)), 5.0, "and puts the rest on the ring")
 
 
@@ -363,8 +363,8 @@ func _test_hitbox_geometry() -> void:
 	var holder := Node3D.new()
 	add_child(holder)
 
-	var sphere := DotHitbox.new()
-	sphere.shape = DotHitbox.Shape.SPHERE
+	var sphere := GSHitbox.new()
+	sphere.shape = GSHitbox.Shape.SPHERE
 	sphere.radius = 0.5
 	sphere.position = Vector3(0.0, 0.0, -10.0)
 	holder.add_child(sphere)
@@ -384,8 +384,8 @@ func _test_hitbox_geometry() -> void:
 	var inside := sphere.intersect_ray(Vector3(0.0, 0.0, -10.0), Vector3.FORWARD, 10.0)
 	_check(inside.ok() and inside.distance == 0.0, "a ray starting inside hits at zero")
 
-	var box := DotHitbox.new()
-	box.shape = DotHitbox.Shape.BOX
+	var box := GSHitbox.new()
+	box.shape = GSHitbox.Shape.BOX
 	box.half_extents = Vector3(0.5, 0.5, 0.5)
 	box.position = Vector3(0.0, 0.0, -20.0)
 	holder.add_child(box)
@@ -395,8 +395,8 @@ func _test_hitbox_geometry() -> void:
 	_close(box_hit.distance, 19.5, "at its near face")
 	_close(box_hit.normal.z, 1.0, "with the face normal pointing back at the shooter")
 
-	var capsule := DotHitbox.new()
-	capsule.shape = DotHitbox.Shape.CAPSULE
+	var capsule := GSHitbox.new()
+	capsule.shape = GSHitbox.Shape.CAPSULE
 	capsule.radius = 0.3
 	capsule.height = 2.0
 	capsule.position = Vector3(0.0, 0.0, -30.0)
@@ -423,7 +423,7 @@ func _test_hitbox_geometry() -> void:
 	_done()
 
 
-func _hitbox_transforms(holder: Node3D, sphere: DotHitbox, capsule: DotHitbox) -> void:
+func _hitbox_transforms(holder: Node3D, sphere: GSHitbox, capsule: GSHitbox) -> void:
 	# A rotated hitbox must be hit where it actually is, not where its untransformed
 	# shape would be. Animated limbs are rotated constantly.
 	capsule.rotation_degrees = Vector3(90.0, 0.0, 0.0)
@@ -441,8 +441,8 @@ func _hitbox_transforms(holder: Node3D, sphere: DotHitbox, capsule: DotHitbox) -
 	_close(scaled.distance, 19.0, "and reports world-space distance", 0.05)
 	holder.scale = Vector3.ONE
 
-	var disabled := DotHitbox.new()
-	disabled.shape = DotHitbox.Shape.SPHERE
+	var disabled := GSHitbox.new()
+	disabled.shape = GSHitbox.Shape.SPHERE
 	disabled.radius = 1.0
 	disabled.enabled = false
 	disabled.position = Vector3(0.0, 0.0, -5.0)
@@ -473,17 +473,17 @@ func _test_hitbox_precedence() -> void:
 		Vector3(0.0, 1.62, 0.0), Vector3.FORWARD, 100.0
 	)
 	_check(head.ok(), "the head is reachable")
-	_check(head.group == DotHitGroup.HEAD, "and wins at head height", String(head.group))
+	_check(head.group == GSHitGroup.HEAD, "and wins at head height", String(head.group))
 
 	var chest := set_node.intersect_ray(
 		Vector3(0.0, 1.0, 0.0), Vector3.FORWARD, 100.0
 	)
-	_check(chest.group == DotHitGroup.CHEST, "the chest is hit at chest height")
+	_check(chest.group == GSHitGroup.CHEST, "the chest is hit at chest height")
 
 	var legs := set_node.intersect_ray(
 		Vector3(0.0, 0.45, 0.0), Vector3.FORWARD, 100.0
 	)
-	_check(legs.group == DotHitGroup.LEG, "the legs are hit at leg height")
+	_check(legs.group == GSHitGroup.LEG, "the legs are hit at leg height")
 
 	var over := set_node.intersect_ray(
 		Vector3(0.0, 3.0, 0.0), Vector3.FORWARD, 100.0
@@ -511,7 +511,7 @@ func _test_hitbox_precedence() -> void:
 func _test_flat_trace() -> void:
 	_section("flat trace")
 
-	var trace := DotTraceFlat.with_floor(0.0)
+	var trace := GSTraceFlat.with_floor(0.0)
 
 	var down := trace.ray(Vector3(0.0, 5.0, 0.0), Vector3.DOWN, 100.0)
 	_check(down.ok() and down.blocked, "the floor blocks a downward ray")
@@ -535,7 +535,7 @@ func _test_flat_trace() -> void:
 		"and clear over the top of it"
 	)
 
-	var walled := DotTraceFlat.new()
+	var walled := GSTraceFlat.new()
 	walled.add_wall(Vector3(-3.0, 0.0, -4.0), Vector3(3.0, 0.0, -4.0), 3.0, 0.4)
 	var through := walled.ray(Vector3(0.0, 1.0, 0.0), Vector3.FORWARD, 100.0)
 	_check(through.ok(), "a wall built from two points blocks a ray")
@@ -543,11 +543,11 @@ func _test_flat_trace() -> void:
 	_done()
 
 
-## Random boxes and rays through the native box walk (GameSpice Sim's DotSimFlatTrace) and the
+## Random boxes and rays through the native box walk (GameSpice Sim's GSSimFlatTrace) and the
 ## script loop: every hit equal to the bit. Without the library both sides are the script.
 func _test_flat_trace_native() -> void:
 	_section("flat trace: native walk against script")
-	var loaded := ClassDB.class_exists(&"DotSimFlatTrace")
+	var loaded := ClassDB.class_exists(&"GSSimFlatTrace")
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20261121
 	var same := 0
@@ -558,9 +558,9 @@ func _test_flat_trace_native() -> void:
 	var batched_same := 0
 	var batch_miss := ""
 	for world in 40:
-		var gd := DotTraceFlat.with_floor(rng.randf_range(-2.0, 1.0)) if rng.randf() < 0.5 else DotTraceFlat.new()
+		var gd := GSTraceFlat.with_floor(rng.randf_range(-2.0, 1.0)) if rng.randf() < 0.5 else GSTraceFlat.new()
 		gd.native = false
-		var nat := DotTraceFlat.new()
+		var nat := GSTraceFlat.new()
 		nat.floor_y = gd.floor_y
 		for b in [0, 3, 12, rng.randi_range(0, 80), 400][world % 5]:
 			var at := Vector3(rng.randf_range(-20.0, 20.0), rng.randf_range(-2.0, 6.0), rng.randf_range(-20.0, 20.0))
@@ -573,7 +573,7 @@ func _test_flat_trace_native() -> void:
 		var batch_from := PackedVector3Array()
 		var batch_dir := PackedVector3Array()
 		var batch_reach := PackedFloat64Array()
-		var singles: Array[DotHitbox.Hit] = []
+		var singles: Array[GSHitbox.Hit] = []
 		for r in 200:
 			var from := Vector3(rng.randf_range(-25.0, 25.0), rng.randf_range(-1.0, 7.0), rng.randf_range(-25.0, 25.0))
 			var dir := Vector3(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0))
@@ -605,7 +605,7 @@ func _test_flat_trace_native() -> void:
 				batch_miss = "world %d ray %d: script %s %s, batch %s %s" % [world, r, singles[r].point, singles[r].distance, many[r].point, many[r].distance]
 	_check(same == cases and hits > cases / 5, "%d random rays (%d hits): the %s walk matches the script to the bit" % [cases, hits, "native" if loaded else "script (no library)"], first_miss)
 	_check(batched == cases and batched_same == batched, "%d rays in one world_rays call per world match the script's one-at-a-time hits to the bit" % batched, batch_miss)
-	var t := DotTraceFlat.new().add_box(AABB(Vector3.ZERO, Vector3.ONE))
+	var t := GSTraceFlat.new().add_box(AABB(Vector3.ZERO, Vector3.ONE))
 	_check(t.is_native() == loaded, "the native walk is on exactly when the library is loaded")
 	t.boxes.append(AABB(Vector3(4.0, 0.0, 0.0), Vector3.ONE))
 	var stale := t.is_native()
@@ -614,7 +614,7 @@ func _test_flat_trace_native() -> void:
 	_done()
 
 
-func _same_hit(a: DotHitbox.Hit, b: DotHitbox.Hit) -> bool:
+func _same_hit(a: GSHitbox.Hit, b: GSHitbox.Hit) -> bool:
 	return a.blocked == b.blocked and a.point == b.point and a.normal == b.normal and a.distance == b.distance and a.material == b.material and a.ok() == b.ok()
 
 
@@ -623,24 +623,24 @@ func _same_hit(a: DotHitbox.Hit, b: DotHitbox.Hit) -> bool:
 func _test_criticals() -> void:
 	_section("criticals")
 
-	var rules := DotDamageRules.new()
-	var resolver := DotDamageResolver.with_rules(rules)
+	var rules := GSDamageRules.new()
+	var resolver := GSDamageResolver.with_rules(rules)
 	var type := _bullet()
 
-	var head := DotDamage.make(1, 3, 25.0, type)
-	head.hit_group = DotHitGroup.HEAD
+	var head := GSDamage.make(1, 3, 25.0, type)
+	head.hit_group = GSHitGroup.HEAD
 	resolver.resolve(head)
 	_check(head.critical, "a headshot is a critical by default")
 	_close(head.amount, 100.0, "and does exactly the head's damage: the default adds nothing")
 
-	var body := DotDamage.make(1, 3, 25.0, type)
-	body.hit_group = DotHitGroup.CHEST
+	var body := GSDamage.make(1, 3, 25.0, type)
+	body.hit_group = GSHitGroup.CHEST
 	resolver.resolve(body)
 	_check(not body.critical, "a body shot is not, with no chance set")
 
 	rules.critical_scale = 1.5
-	var harder := DotDamage.make(1, 3, 25.0, type)
-	harder.hit_group = DotHitGroup.HEAD
+	var harder := GSDamage.make(1, 3, 25.0, type)
+	harder.hit_group = GSHitGroup.HEAD
 	resolver.resolve(harder)
 	_close(harder.amount, 150.0, "critical_scale multiplies a critical after the hit group")
 
@@ -651,7 +651,7 @@ func _test_criticals() -> void:
 	rules.critical_chance = 0.25
 	var crits := 0
 	for tick in range(1000):
-		var hit := DotDamage.make(1, 3, 10.0, type)
+		var hit := GSDamage.make(1, 3, 10.0, type)
 		hit.tick = tick
 		hit.weapon_id = &"rifle"
 		resolver.resolve(hit)
@@ -660,19 +660,19 @@ func _test_criticals() -> void:
 	_check(crits > 200 and crits < 300, "a 25% chance lands near a quarter of hits",
 		"%d of 1000" % crits)
 
-	var again := DotDamage.make(1, 3, 10.0, type)
+	var again := GSDamage.make(1, 3, 10.0, type)
 	again.tick = 77
 	again.weapon_id = &"rifle"
-	var twice := DotDamage.make(1, 3, 10.0, type)
+	var twice := GSDamage.make(1, 3, 10.0, type)
 	twice.tick = 77
 	twice.weapon_id = &"rifle"
 	_check(
 		resolver.is_critical(again) == resolver.is_critical(twice)
-			and DotDamageResolver.critical_roll(again) == DotDamageResolver.critical_roll(twice),
+			and GSDamageResolver.critical_roll(again) == GSDamageResolver.critical_roll(twice),
 		"the same hit rolls the same, on any machine and any replay"
 	)
 
-	var own := DotDamage.make(1, 1, 10.0, type)
+	var own := GSDamage.make(1, 1, 10.0, type)
 	rules.critical_chance = 1.0
 	_check(not resolver.is_critical(own), "self damage is never a critical")
 	_done()
@@ -681,33 +681,33 @@ func _test_criticals() -> void:
 func _test_resolver_rules() -> void:
 	_section("damage rules")
 
-	var rules := DotDamageRules.new()
+	var rules := GSDamageRules.new()
 	rules.friendly_fire = false
 	rules.self_damage = true
 
-	var resolver := DotDamageResolver.with_rules(rules)
+	var resolver := GSDamageResolver.with_rules(rules)
 	var teams := {1: 1, 2: 1, 3: 2, 4: 0, 5: 0}
 	resolver.team_of = func(id: int) -> int: return int(teams.get(id, 0))
 
 	var type := _bullet()
 
-	var friendly := DotDamage.make(1, 2, 50.0, type)
+	var friendly := GSDamage.make(1, 2, 50.0, type)
 	resolver.resolve(friendly)
 	_check(friendly.refused, "friendly fire off refuses damage to a team-mate")
 
-	var enemy := DotDamage.make(1, 3, 50.0, type)
+	var enemy := GSDamage.make(1, 3, 50.0, type)
 	resolver.resolve(enemy)
 	_check(not enemy.refused, "and permits it to an enemy")
 
 	# The one that silently breaks a free-for-all: two players with no team must not
 	# be treated as allies because their team ids are both zero.
-	var unassigned := DotDamage.make(4, 5, 50.0, type)
+	var unassigned := GSDamage.make(4, 5, 50.0, type)
 	resolver.resolve(unassigned)
 	_check(not unassigned.refused, "two unassigned players are not team-mates")
 
 	rules.friendly_fire = true
 	rules.friendly_scale = 0.5
-	var scaled := DotDamage.make(1, 2, 50.0, type)
+	var scaled := GSDamage.make(1, 2, 50.0, type)
 	resolver.resolve(scaled)
 	_close(scaled.amount, 25.0, "friendly fire on scales instead of refusing")
 
@@ -719,12 +719,12 @@ func _test_resolver_rules() -> void:
 	_check(back.attacker == 2 and back.victim == 1, "and points the other way")
 
 	rules.self_damage = false
-	var suicide := DotDamage.make(1, 1, 50.0, type)
+	var suicide := GSDamage.make(1, 1, 50.0, type)
 	resolver.resolve(suicide)
 	_check(suicide.refused, "self damage off refuses it")
 
 	rules.self_damage = true
-	var rocket_jump := DotDamage.make(1, 1, 50.0, type)
+	var rocket_jump := GSDamage.make(1, 1, 50.0, type)
 	resolver.resolve(rocket_jump)
 	_close(rocket_jump.amount, 25.0, "self damage on applies the type's own scale")
 
@@ -732,40 +732,40 @@ func _test_resolver_rules() -> void:
 	_done()
 
 
-func _resolver_clamps_and_hook(rules: DotDamageRules, resolver: DotDamageResolver, type: DotDamageType) -> void:
+func _resolver_clamps_and_hook(rules: GSDamageRules, resolver: GSDamageResolver, type: GSDamageType) -> void:
 	# Hit groups and falloff compose, and the clamp is last.
 	rules.maximum = 100.0
-	var headshot := DotDamage.make(1, 3, 50.0, type)
-	headshot.hit_group = DotHitGroup.HEAD
+	var headshot := GSDamage.make(1, 3, 50.0, type)
+	headshot.hit_group = GSHitGroup.HEAD
 	resolver.resolve(headshot)
 	_close(headshot.amount, 100.0, "a headshot is clamped by the stated maximum")
 
 	rules.maximum = 0.0
-	var far := DotDamage.make(1, 3, 50.0, type)
+	var far := GSDamage.make(1, 3, 50.0, type)
 	far.distance = 60.0
 	resolver.resolve(far)
 	_close(far.amount, 25.0, "falloff applies at range")
 
 	rules.minimum = 30.0
-	var grazing := DotDamage.make(1, 3, 50.0, type)
+	var grazing := GSDamage.make(1, 3, 50.0, type)
 	grazing.distance = 60.0
 	resolver.resolve(grazing)
 	_check(grazing.refused, "damage under the minimum is refused")
 	rules.minimum = 0.0
 
 	# The scaling trace is what makes a surprising number explainable.
-	var traced := DotDamage.make(1, 3, 50.0, type)
-	traced.hit_group = DotHitGroup.HEAD
+	var traced := GSDamage.make(1, 3, 50.0, type)
+	traced.hit_group = GSHitGroup.HEAD
 	traced.distance = 40.0
 	resolver.resolve(traced)
 	var scales: Array = traced.context.get("scales", [])
 	_check(scales.size() >= 2, "every scale is recorded", str(scales))
 
 	# The game-mode hook can veto.
-	resolver.adjust = func(damage: DotDamage) -> void:
+	resolver.adjust = func(damage: GSDamage) -> void:
 		if damage.victim == 3:
 			damage.refuse("test hook")
-	var vetoed := DotDamage.make(1, 3, 50.0, type)
+	var vetoed := GSDamage.make(1, 3, 50.0, type)
 	resolver.resolve(vetoed)
 	_check(vetoed.refused and vetoed.refusal == "test hook", "and a hook can veto")
 	resolver.adjust = Callable()

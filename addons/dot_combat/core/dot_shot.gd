@@ -1,10 +1,10 @@
-class_name DotShot
+class_name GSShot
 extends RefCounted
 
 ## One thing that was fired and now has to be resolved against the world.
 ##
 ## [b]It describes itself rather than pointing at a weapon.[/b] Until GameSpice Weapon
-## existed this held a `DotWeapon` and the manager read `weapon.damage`,
+## existed this held a `GSWeapon` and the manager read `weapon.damage`,
 ## `weapon.max_range` and `weapon.delivery` off it, which quietly made "what can be
 ## resolved" the same question as "what that one resource can describe": a bow, a
 ## thrown charge and a game's own weapon had no way to produce one without pretending
@@ -17,7 +17,7 @@ extends RefCounted
 ##
 ## [b]Deciding a shot happened and deciding what it hit are still two different jobs in
 ## two different places.[/b] Whoever made the shot runs on the owning client and on the
-## server; [DotCombatManager] resolves it only where the authority is.
+## server; [GSCombatManager] resolves it only where the authority is.
 
 ## What produced it, for a kill feed, a statistic and a damage record.
 ##
@@ -25,11 +25,11 @@ extends RefCounted
 ## itself and a server validating a hit should not have to have the weapon loaded.
 var weapon_id: StringName = &""
 
-## The carrier. A game's own id space, matched against [member DotDamage.attacker].
+## The carrier. A game's own id space, matched against [member GSDamage.attacker].
 var attacker: int = 0
 
 ## The tick the trigger was pulled on. On the server this is the tick the client
-## claims, after clamping — see [method DotCombatManager.resolve_shot].
+## claims, after clamping — see [method GSCombatManager.resolve_shot].
 var tick: int = 0
 
 ## Index of this shot within the carrier's history, so two shots on the same tick
@@ -59,7 +59,7 @@ var fixed_pattern: bool = false
 ## Damage one pellet does before any rule is applied.
 var damage: float = 0.0
 
-var damage_type: DotDamageType = null
+var damage_type: GSDamageType = null
 
 ## Metres past which a pellet hits nothing.
 var max_range: float = 200.0
@@ -79,7 +79,7 @@ var splash_radius: float = 0.0
 var splash_damage: float = 0.0
 
 ## The splash's own type. Null falls back to [member damage_type].
-var splash_type: DotDamageType = null
+var splash_type: GSDamageType = null
 
 var splash_hurts_owner: bool = true
 
@@ -90,7 +90,7 @@ var splash_hurts_owner: bool = true
 var replayed: bool = false
 
 ## Filled in by the manager once the shot is resolved.
-var damages: Array[DotDamage] = []
+var damages: Array[GSDamage] = []
 
 ## Where each pellet ended up, for tracers and decals. Parallel to [member pellets],
 ## and populated even for pellets that hit nothing — the endpoint is then the maximum
@@ -98,7 +98,7 @@ var damages: Array[DotDamage] = []
 var impacts: Array[Vector3] = []
 
 ## What the round can pass through; null (the default) stops at the first wall or body, as before.
-var penetration: DotPenetration = null
+var penetration: GSPenetration = null
 
 ## One entry per wall passed (`cost` is the power it spent: thickness * resistance * speed factor): `{pellet, material, thickness, cost, entry, exit, entry_normal, exit_normal}`. A decal goes on both faces.
 var penetrations: Array[Dictionary] = []
@@ -112,8 +112,8 @@ static func make(
 	p_attacker: int,
 	p_tick: int,
 	p_index: int
-) -> DotShot:
-	var shot := DotShot.new()
+) -> GSShot:
+	var shot := GSShot.new()
 	shot.weapon_id = p_weapon_id
 	shot.attacker = p_attacker
 	shot.tick = p_tick
@@ -124,7 +124,7 @@ static func make(
 ## Builds the pellet directions.
 ##
 ## Deterministic in every input, so a client and a server that agree on the shot agree
-## on the pattern. See [DotSpread].
+## on the pattern. See [GSSpread].
 func scatter() -> void:
 	pellets.clear()
 
@@ -132,10 +132,10 @@ func scatter() -> void:
 
 	for pellet in range(count):
 		if fixed_pattern:
-			pellets.append(DotSpread.fixed_cone(direction, spread, pellet, count))
+			pellets.append(GSSpread.fixed_cone(direction, spread, pellet, count))
 		else:
 			pellets.append(
-				DotSpread.cone(direction, spread, attacker, tick, index, pellet)
+				GSSpread.cone(direction, spread, attacker, tick, index, pellet)
 			)
 
 
@@ -198,6 +198,6 @@ func describe() -> Dictionary:
 
 
 func _to_string() -> String:
-	return "DotShot(%s t%d, %d pellets, %.0f dmg)" % [
+	return "GSShot(%s t%d, %d pellets, %.0f dmg)" % [
 		String(weapon_id), tick, pellets.size(), total_damage()
 	]

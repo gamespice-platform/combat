@@ -1,12 +1,12 @@
-class_name DotStomp
+class_name GSStomp
 extends RefCounted
-## Finds who a falling player has landed on, by the numbers of [DotStompRules]. One per game.
+## Finds who a falling player has landed on, by the numbers of [GSStompRules]. One per game.
 ## Pure over positions: the host feeds it feet, speeds and hulls each tick and applies the result.
 
 const LETHAL_DAMAGE := 100000.0
 const CHANNEL := "combat.stomp"
 
-var rules: DotStompRules = DotStompRules.new()
+var rules: GSStompRules = GSStompRules.new()
 
 var stomps: int = 0
 var _last_tick: Dictionary = {}
@@ -55,7 +55,7 @@ func find(attacker: int, feet: Vector3, radius: float, fall_speed: float, attack
 	if best != 0:
 		_last_tick[attacker] = tick
 		stomps += 1
-		DotLog.debug(CHANNEL, "stomp", {"attacker": attacker, "victim": best, "fall_speed": fall_speed})
+		GSLog.debug(CHANNEL, "stomp", {"attacker": attacker, "victim": best, "fall_speed": fall_speed})
 
 	return best
 

@@ -1,11 +1,11 @@
 extends "res://examples/selftest/manager_tests.gd"
 
-## The spatial prefilter in DotTrace.ray and DotCombatManager.pass_through_sets must change nothing:
+## The spatial prefilter in GSTrace.ray and GSCombatManager.pass_through_sets must change nothing:
 ## random worlds and shots, new code against a verbatim copy of the code it replaced.
 
 
-## DotTrace.ray as it was before the inline bounds test: may_be_hit alone rejects.
-func _ref_ray(trace: DotTrace, from: Vector3, direction: Vector3, max_distance: float, sets: Array[DotHitboxSet]) -> DotHitbox.Hit:
+## GSTrace.ray as it was before the inline bounds test: may_be_hit alone rejects.
+func _ref_ray(trace: GSTrace, from: Vector3, direction: Vector3, max_distance: float, sets: Array[GSHitboxSet]) -> GSHitbox.Hit:
 	var world := trace._world_ray(from, direction, max_distance)
 
 	if world.ok():
@@ -38,8 +38,8 @@ func _ref_ray(trace: DotTrace, from: Vector3, direction: Vector3, max_distance: 
 		best = hit
 		limit = hit.distance
 
-	if best.ok() and not best.blocked and best.distance > DotTrace.WALL_RECHECK_MIN:
-		var back := trace._world_ray(best.point, -direction, best.distance - DotTrace.WALL_RECHECK_MIN)
+	if best.ok() and not best.blocked and best.distance > GSTrace.WALL_RECHECK_MIN:
+		var back := trace._world_ray(best.point, -direction, best.distance - GSTrace.WALL_RECHECK_MIN)
 		if back.ok():
 			back.blocked = true
 			back.inside_start = true
@@ -49,9 +49,9 @@ func _ref_ray(trace: DotTrace, from: Vector3, direction: Vector3, max_distance: 
 	return best
 
 
-## DotCombatManager.pass_through_sets as it was before the inline bounds test.
-func _ref_pass_through_sets(m: DotCombatManager, shot: DotShot) -> Array[DotHitboxSet]:
-	var out: Array[DotHitboxSet] = []
+## GSCombatManager.pass_through_sets as it was before the inline bounds test.
+func _ref_pass_through_sets(m: GSCombatManager, shot: GSShot) -> Array[GSHitboxSet]:
+	var out: Array[GSHitboxSet] = []
 
 	if shot == null:
 		return out
@@ -91,7 +91,7 @@ func _ref_pass_through_sets(m: DotCombatManager, shot: DotShot) -> Array[DotHitb
 	return out
 
 
-func _hit_key(hit: DotHitbox.Hit) -> String:
+func _hit_key(hit: GSHitbox.Hit) -> String:
 	return "%s|%s|%s|%s|%s|%s|%s" % [
 		hit.distance, hit.point, hit.normal, hit.hitbox.get_instance_id() if hit.hitbox != null else 0,
 		hit.entity.get_instance_id() if hit.entity != null else 0, hit.blocked, hit.inside_start,
@@ -106,8 +106,8 @@ func _unit(rng: RandomNumberGenerator) -> Vector3:
 func _test_trace_prefilter() -> void:
 	_section("the spatial prefilter changes no ray and no pass-through set")
 
-	var rules := DotDamageRules.new()
-	var flat := DotTraceFlat.with_floor(0.0)
+	var rules := GSDamageRules.new()
+	var flat := GSTraceFlat.with_floor(0.0)
 	flat.add_box(AABB(Vector3(-4.0, 0.0, -30.0), Vector3(8.0, 3.0, 0.5)))
 	flat.add_box(AABB(Vector3(10.0, 0.0, -5.0), Vector3(0.5, 3.0, 12.0)))
 	var manager := _make_manager(flat, rules)
@@ -139,7 +139,7 @@ func _test_trace_prefilter() -> void:
 			kept[rng.randi_range(0, kept.size() - 1)].free()
 
 	teams[1] = 1
-	var sets: Array[DotHitboxSet] = manager._set_list
+	var sets: Array[GSHitboxSet] = manager._set_list
 	var trials := 600
 	var ray_diff := 0
 	var ray_hits := 0
@@ -176,7 +176,7 @@ func _test_trace_prefilter() -> void:
 
 
 ## pass_through_sets at levels 0, 1 and 2, and with a pass_through_fn, against the unfiltered walk.
-func _prefilter_pass_through(manager: DotCombatManager, rules: DotDamageRules, rng: RandomNumberGenerator, trials: int) -> void:
+func _prefilter_pass_through(manager: GSCombatManager, rules: GSDamageRules, rng: RandomNumberGenerator, trials: int) -> void:
 	var levels_diff := [0, 0, 0]
 	var nonempty := 0
 
@@ -199,7 +199,7 @@ func _prefilter_pass_through(manager: DotCombatManager, rules: DotDamageRules, r
 	_check(nonempty > 50, "and some of those shots pass through bodies", str(nonempty))
 
 	rules.set_pass_through_level(0)
-	manager.pass_through_fn = func(_s: DotShot, set_node: DotHitboxSet, id: int) -> bool: return id % 2 == 0 and set_node.enabled
+	manager.pass_through_fn = func(_s: GSShot, set_node: GSHitboxSet, id: int) -> bool: return id % 2 == 0 and set_node.enabled
 	var fn_diff := 0
 	for t in range(trials):
 		var shot := _rifle_shot(1, 100, 1)

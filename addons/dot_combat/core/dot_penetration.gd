@@ -1,8 +1,8 @@
-class_name DotPenetration
+class_name GSPenetration
 extends RefCounted
 
 ## What one round can pass through: a power in metres of reference material, a resistance per surface material, a
-## power cost per body. A [DotShot] carries it, so the manager reads nothing off a weapon; GameSpice Weapon builds it from an ammo profile.
+## power cost per body. A [GSShot] carries it, so the manager reads nothing off a weapon; GameSpice Weapon builds it from an ammo profile.
 
 ## Skull and neck are dense: a head hit costs several times the power of a chest hit, so a rifle round that crosses a torso stops in a head.
 const DEFAULT_BODY_ZONES := {&"head": 8.0, &"neck": 3.0}
@@ -85,8 +85,8 @@ func strength(left: float) -> float:
 	return maxf(clampf(left / power, 0.0, 1.0), min_damage)
 
 
-func duplicate_scaled(scale: float) -> DotPenetration:
-	var p := DotPenetration.new()
+func duplicate_scaled(scale: float) -> GSPenetration:
+	var p := GSPenetration.new()
 	p.power = power * scale
 	p.materials = materials
 	p.default_resistance = default_resistance

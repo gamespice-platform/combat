@@ -1,10 +1,10 @@
-class_name DotTrace
+class_name GSTrace
 extends RefCounted
 
 ## Where a shot goes. The single place a weapon asks "what did I hit".
 ##
 ## [b]Why this is an abstraction and not just a physics query.[/b] The same reason
-## GameSpice Player Controller has [code]DotFpsBody[/code]: a headless server, a self-test and
+## GameSpice Player Controller has [code]GSFpsBody[/code]: a headless server, a self-test and
 ## a deterministic replay all need to trace against a world, and only one of those
 ## three has a populated physics space. Subclass it and a game can trace against
 ## anything — a heightmap, a voxel grid, a set of analytic boxes — without weapons
@@ -44,21 +44,21 @@ var sphere_observer: Callable = Callable()
 ## The world-geometry hit, or a miss. Override this and nothing else.
 ##
 ## Must return the [i]nearest[/i] solid surface along the ray, with
-## [member DotHitbox.Hit.blocked] set. Returning a farther one lets shots through
+## [member GSHitbox.Hit.blocked] set. Returning a farther one lets shots through
 ## walls; returning nothing at all makes every wall in the game transparent to
 ## gunfire, which is the failure this base class cannot detect for you.
 func _world_ray(
 	_from: Vector3,
 	_direction: Vector3,
 	_max_distance: float
-) -> DotHitbox.Hit:
-	return DotHitbox.Hit.new()
+) -> GSHitbox.Hit:
+	return GSHitbox.Hit.new()
 
 
 ## Traces a ray against world geometry and a set of entities.
 ##
 ## Returns the nearest hit of either kind. A world hit that is nearer than every
-## hitbox comes back with [member DotHitbox.Hit.blocked] set and no entity, which is
+## hitbox comes back with [member GSHitbox.Hit.blocked] set and no entity, which is
 ## how a caller tells "hit a wall" from "hit nobody" — the first should still spawn a
 ## decal and the second should not.
 ##
@@ -69,8 +69,8 @@ func ray(
 	from: Vector3,
 	direction: Vector3,
 	max_distance: float,
-	sets: Array[DotHitboxSet] = []
-) -> DotHitbox.Hit:
+	sets: Array[GSHitboxSet] = []
+) -> GSHitbox.Hit:
 	var world := _world_ray(from, direction, max_distance)
 
 	if world.ok():
@@ -87,7 +87,7 @@ func ray(
 			continue
 
 		# The bounds first: a few hundred bodies a shot, nearly all of them nowhere near the line.
-		# The sphere test of DotHitboxSet._ray_hits_bounds inline, same arithmetic: a call per set is most of the cost of a miss.
+		# The sphere test of GSHitboxSet._ray_hits_bounds inline, same arithmetic: a call per set is most of the cost of a miss.
 		var offset := from - set_node.global_transform * set_node.bounds_offset
 		var along := offset.dot(direction)
 		var gap := offset.length_squared() - set_node.bounds_radius * set_node.bounds_radius
@@ -161,12 +161,12 @@ func line_of_sight(from: Vector3, to: Vector3) -> bool:
 func sphere_overlap(
 	centre: Vector3,
 	radius: float,
-	sets: Array[DotHitboxSet] = [],
+	sets: Array[GSHitboxSet] = [],
 	require_line_of_sight: bool = true
-) -> Array[DotHitboxSet]:
+) -> Array[GSHitboxSet]:
 	if sphere_observer.is_valid():
 		sphere_observer.call(centre, radius)
-	var found: Array[DotHitboxSet] = []
+	var found: Array[GSHitboxSet] = []
 	var distances: Array[float] = []
 
 	for set_node in sets:
@@ -196,7 +196,7 @@ func sphere_overlap(
 	return found
 
 
-func _is_excluded(set_node: DotHitboxSet) -> bool:
+func _is_excluded(set_node: GSHitboxSet) -> bool:
 	if exclude.is_empty():
 		return false
 

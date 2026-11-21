@@ -1,4 +1,4 @@
-class_name DotSentry
+class_name GSSentry
 extends RefCounted
 
 ## An automatic gun on a stand: picks a target, turns to it, fires when it is lined up.
@@ -6,7 +6,7 @@ extends RefCounted
 ## [b]Pure decision, no scene.[/b] A sentry knows where it is, how far it sees, how fast it turns,
 ## how often it fires and how long it lasts. The game gives it the candidates (any list of
 ## dictionaries with `id` and `at`) and a line-of-sight [Callable]; it answers "fire at this one"
-## and the game turns that into a [DotShot] or a damage event. It is no [Node] because a server
+## and the game turns that into a [GSShot] or a damage event. It is no [Node] because a server
 ## runs many of them with no tree to hang them on, and because a client draws its own model from
 ## the same numbers without needing the decision.
 ##
@@ -140,12 +140,12 @@ func _find(candidates: Array, id: int) -> Dictionary:
 ## Whether a sentry may stand where [param from] looks along [param dir] up to [param reach]: the
 ## first thing the ray meets must be floor (its normal within [param max_tilt] degrees of up) with
 ## [param headroom] metres of nothing above, and room for the stand's radius [param footprint].
-## Returns a [DotResult] holding `{position, normal}`; the failure's detail says why. The ray
+## Returns a [GSResult] holding `{position, normal}`; the failure's detail says why. The ray
 ## aims down from the end of the reach when the first meeting is a wall, so a sentry can be put
 ## "in front of me" without the caller finding the floor.
 static func find_spot(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vector3, mask: int,
 		reach_m: float = 2.5, headroom: float = 1.4, footprint: float = 0.35, max_tilt: float = 25.0,
-		exclude: Array[RID] = []) -> DotResult:
+		exclude: Array[RID] = []) -> GSResult:
 	var ahead := from + dir.normalized() * reach_m
 	var wall := PhysicsRayQueryParameters3D.create(from, ahead)
 	wall.collision_mask = mask
@@ -161,12 +161,12 @@ static func find_spot(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vect
 	var floor_hit := space.intersect_ray(down)
 
 	if floor_hit.is_empty():
-		return DotResult.fail(DotError.CODE_INVALID, "No floor there.", "no_floor")
+		return GSResult.fail(GSError.CODE_INVALID, "No floor there.", "no_floor")
 
 	var normal: Vector3 = floor_hit["normal"]
 
 	if rad_to_deg(normal.angle_to(Vector3.UP)) > max_tilt:
-		return DotResult.fail(DotError.CODE_INVALID, "Too steep.", "steep")
+		return GSResult.fail(GSError.CODE_INVALID, "Too steep.", "steep")
 
 	var at: Vector3 = floor_hit["position"]
 	var roof := PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.05, at + Vector3.UP * headroom)
@@ -174,7 +174,7 @@ static func find_spot(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vect
 	roof.exclude = exclude
 
 	if not space.intersect_ray(roof).is_empty():
-		return DotResult.fail(DotError.CODE_INVALID, "No room above.", "headroom")
+		return GSResult.fail(GSError.CODE_INVALID, "No room above.", "headroom")
 
 	var ring := PhysicsShapeQueryParameters3D.new()
 	var sphere := SphereShape3D.new()
@@ -185,6 +185,6 @@ static func find_spot(space: PhysicsDirectSpaceState3D, from: Vector3, dir: Vect
 	ring.exclude = exclude
 
 	if not space.intersect_shape(ring, 1).is_empty():
-		return DotResult.fail(DotError.CODE_INVALID, "Something is in the way.", "blocked")
+		return GSResult.fail(GSError.CODE_INVALID, "Something is in the way.", "blocked")
 
-	return DotResult.success({"position": at, "normal": normal})
+	return GSResult.success({"position": at, "normal": normal})

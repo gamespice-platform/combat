@@ -1,19 +1,19 @@
 @tool
-class_name DotCombatManager
-extends DotCombatBase
+class_name GSCombatManager
+extends GSCombatBase
 
 ## Resolves shots into damage. The server-side half of GameSpice Combat.
 ##
 ## The shooter runs on both ends and this only where the game is authoritative, so a client
 ## can predict its own fire without ever deciding who dies.
 ##
-## No autoload: it registers in [DotRegistry] under [constant SERVICE]; a server and a client
+## No autoload: it registers in [GSRegistry] under [constant SERVICE]; a server and a client
 ## in one process need two, told apart by [member service_scope].
 ##
 ## [codeblock]
-## var manager := DotCombatManager.new()
-## manager.trace = DotTraceFlat.with_floor(0.0)
-## manager.rules = DotDamageRules.strict()
+## var manager := GSCombatManager.new()
+## manager.trace = GSTraceFlat.with_floor(0.0)
+## manager.rules = GSDamageRules.strict()
 ## add_child(manager)
 ##
 ## # Every entity that can be shot.
@@ -45,21 +45,21 @@ func _ready() -> void:
 	var res := setup()
 
 	if not res.ok:
-		DotLog.result(CHANNEL, "combat setup", res)
+		GSLog.result(CHANNEL, "combat setup", res)
 
 
 func _exit_tree() -> void:
 	if _registered_name != &"":
-		DotRegistry.unregister_instance(_registered_name, self)
+		GSRegistry.unregister_instance(_registered_name, self)
 		_registered_name = &""
 
 
 ## Builds everything that was left null and registers the service.
 ##
 ## Safe to call twice; the second call rebuilds nothing that already exists.
-func setup() -> DotResult:
+func setup() -> GSResult:
 	if config == null:
-		config = DotCombatConfig.new()
+		config = GSCombatConfig.new()
 
 	if load_layered_config:
 		var loaded := config.load_layered(config_file)
@@ -68,9 +68,9 @@ func setup() -> DotResult:
 
 	var valid := config.validate()
 
-	var cfg_limbs := DotAddonConfig.load_dir("dot-combat")
+	var cfg_limbs := GSAddonConfig.load_dir("dot-combat")
 	if cfg_limbs.ok and limb_min_damage.is_empty():
-		var v: Variant = DotAddonConfig.get_value(cfg_limbs.value, "limb_min_damage", {})
+		var v: Variant = GSAddonConfig.get_value(cfg_limbs.value, "limb_min_damage", {})
 		if v is Dictionary:
 			limb_min_damage = v
 
@@ -78,47 +78,47 @@ func setup() -> DotResult:
 		return valid
 
 	if rules == null:
-		rules = DotDamageRules.new()
+		rules = GSDamageRules.new()
 
 	if resolver == null:
-		resolver = DotDamageResolver.with_rules(rules)
+		resolver = GSDamageResolver.with_rules(rules)
 	else:
 		resolver.rules = rules
 		if resolver.hit_groups == null:
-			resolver.hit_groups = DotHitGroup.defaults()
+			resolver.hit_groups = GSHitGroup.defaults()
 
 	if cfg_limbs.ok and resolver.hit_groups != null:
-		var zones: Variant = DotAddonConfig.get_value(cfg_limbs.value, "hit_groups", {})
+		var zones: Variant = GSAddonConfig.get_value(cfg_limbs.value, "hit_groups", {})
 		if zones is Dictionary:
 			var _n := resolver.hit_groups.apply_dict(zones)
 
 	if trace == null:
-		DotLog.warn(
+		GSLog.warn(
 			CHANNEL,
 			"no trace backend; every shot will pass through world geometry"
 		)
-		trace = DotTraceFlat.new()
+		trace = GSTraceFlat.new()
 
 	if not damage_types.has(config.default_damage_type):
-		register_damage_type(DotDamageType.make(config.default_damage_type, "Bullet"))
+		register_damage_type(GSDamageType.make(config.default_damage_type, "Bullet"))
 
 	if register_service:
 		_registered_name = (
-			DotRegistry.scoped_name(SERVICE, service_scope)
+			GSRegistry.scoped_name(SERVICE, service_scope)
 			if service_scope != &""
 			else SERVICE
 		)
-		DotRegistry.register(_registered_name, self)
+		GSRegistry.register(_registered_name, self)
 
 	if is_authority and not rewind_fn.is_valid() and config.lag_compensation:
 		# Not an error (a listen server may not need it), but "on" must not read as "happening".
-		DotLog.info(
+		GSLog.info(
 			CHANNEL,
 			"lag compensation is enabled but no rewind function is wired; "
 			+ "shots resolve against the present"
 		)
 
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 # --- Resolution ------------------------------------------------------------
@@ -128,7 +128,7 @@ func setup() -> DotResult:
 ## [param view_tick] is the tick the shooter was looking at (their tick minus latency and
 ## interpolation delay). -1 resolves against the present: right for server-made shots, wrong
 ## for a client's. The rewind is restored on every path out, or the world stays in the past.
-func resolve_shot(shot: DotShot, view_tick: float = -1.0) -> DotShot:
+func resolve_shot(shot: GSShot, view_tick: float = -1.0) -> GSShot:
 	if shot == null:
 		return shot
 
@@ -158,18 +158,18 @@ func resolve_shot(shot: DotShot, view_tick: float = -1.0) -> DotShot:
 
 	if config.trace_shots:
 		for damage in shot.damages:
-			DotLog.debug(CHANNEL, "damage", damage.describe())
+			GSLog.debug(CHANNEL, "damage", damage.describe())
 
 	shot_resolved.emit(shot)
 	return shot
 
 
-func _validate_shot(shot: DotShot) -> String:
+func _validate_shot(shot: GSShot) -> String:
 	if config.reject_future_ticks and shot.tick < 0:
 		return "negative tick"
 
 	if _shot_limiter == null:
-		_shot_limiter = DotRateLimiter.new(
+		_shot_limiter = GSRateLimiter.new(
 			config.shots_per_second, config.shots_per_second
 		)
 
@@ -186,7 +186,7 @@ func _validate_shot(shot: DotShot) -> String:
 
 ## Relocates a shot whose muzzle is too far from the believed shooter position. Relocated,
 ## not refused: a legitimate origin is a tick ahead by construction.
-func _correct_origin(shot: DotShot) -> void:
+func _correct_origin(shot: GSShot) -> void:
 	if not _origins.has(shot.attacker):
 		return
 
@@ -196,7 +196,7 @@ func _correct_origin(shot: DotShot) -> void:
 	if error <= config.max_origin_error:
 		return
 
-	DotLog.debug(
+	GSLog.debug(
 		CHANNEL,
 		"shot origin relocated",
 		{"entity": shot.attacker, "error": error}
@@ -204,7 +204,7 @@ func _correct_origin(shot: DotShot) -> void:
 	shot.origin = believed
 
 
-func _begin_rewind(shot: DotShot, view_tick: float) -> bool:
+func _begin_rewind(shot: GSShot, view_tick: float) -> bool:
 	if not config.lag_compensation or view_tick < 0.0:
 		return false
 
@@ -224,7 +224,7 @@ func _end_rewind(rewound: bool) -> void:
 		restore_fn.call()
 
 
-func _trace_shot(shot: DotShot) -> void:
+func _trace_shot(shot: GSShot) -> void:
 	var type := shot.damage_type if shot.damage_type != null else damage_type(&"")
 
 	var shooter := hitboxes_of(shot.attacker)
@@ -243,7 +243,7 @@ func _trace_shot(shot: DotShot) -> void:
 			shot.impacts.append(shot.origin + direction * shot.max_range)
 		return
 
-	var pen: DotPenetration = null
+	var pen: GSPenetration = null
 	if penetration_enabled and shot.penetration != null and shot.penetration.enabled():
 		pen = shot.penetration.duplicate_scaled(penetration_scale)
 		if not pen.enabled():
@@ -256,19 +256,19 @@ func _trace_shot(shot: DotShot) -> void:
 
 
 ## One pellet: walls and (under [member penetration_players]) bodies it passes spend [param pen]'s power, damage falls with what is left.
-func _trace_pellet(shot: DotShot, pellet: int, type: DotDamageType, pen: DotPenetration, excluded: Array) -> void:
+func _trace_pellet(shot: GSShot, pellet: int, type: GSDamageType, pen: GSPenetration, excluded: Array) -> void:
 	_tracer.trace_pellet(shot, pellet, type, pen, excluded)
 
 
 ## True when [param hit] is a wall this round bounces off: [member ricochet_enabled], a listed material, a shallow enough angle.
-func _ricochets_off(hit: DotHitbox.Hit, direction: Vector3, pen: DotPenetration, bounces: int) -> bool:
+func _ricochets_off(hit: GSHitbox.Hit, direction: Vector3, pen: GSPenetration, bounces: int) -> bool:
 	if not ricochet_enabled or pen == null or bounces >= pen.max_ricochets or hit.normal.length_squared() < 0.25:
 		return false
 	var grazing := rad_to_deg(asin(clampf(absf(direction.dot(hit.normal)), 0.0, 1.0)))
 	return pen.ricochets(hit.material, grazing)
 
 
-func _set_of(entity: Node) -> DotHitboxSet:
+func _set_of(entity: Node) -> GSHitboxSet:
 	for set_node in _set_list:
 		if set_node != null and is_instance_valid(set_node) and set_node.entity_owner() == entity:
 			return set_node
@@ -276,12 +276,12 @@ func _set_of(entity: Node) -> DotHitboxSet:
 
 
 ## The hitbox sets [param shot] passes through: a team-mate's that already holds its muzzle
-## and, under [member DotDamageRules.pass_through_team_mates], every team-mate's.
+## and, under [member GSDamageRules.pass_through_team_mates], every team-mate's.
 ##
 ## Lives here, not in the trace or hitbox: only the manager has the attacker, the victim's id and the resolver's team_of together.
-## Public for anything tracing outside [method resolve_shot]: pass the result as [member DotTrace.exclude] alongside the shooter.
-func pass_through_sets(shot: DotShot) -> Array[DotHitboxSet]:
-	var out: Array[DotHitboxSet] = []
+## Public for anything tracing outside [method resolve_shot]: pass the result as [member GSTrace.exclude] alongside the shooter.
+func pass_through_sets(shot: GSShot) -> Array[GSHitboxSet]:
+	var out: Array[GSHitboxSet] = []
 
 	if shot == null:
 		return out
@@ -330,7 +330,7 @@ func pass_through_sets(shot: DotShot) -> Array[DotHitboxSet]:
 		if passes:
 			out.append(set_node)
 			if config != null and config.trace_shots:
-				DotLog.debug(CHANNEL, "shot passes through a team-mate or a body at the muzzle", {
+				GSLog.debug(CHANNEL, "shot passes through a team-mate or a body at the muzzle", {
 					"attacker": shot.attacker, "entity": entity_id,
 				})
 
@@ -340,14 +340,14 @@ func pass_through_sets(shot: DotShot) -> Array[DotHitboxSet]:
 # --- Server settings -------------------------------------------------------
 
 ## The cvar an operator sets to decide whether shots pass through team-mates. Values are
-## [DotDamageRules]' PASS_THROUGH_* levels: 0 never (a team-mate is hit and blocks like
+## [GSDamageRules]' PASS_THROUGH_* levels: 0 never (a team-mate is hit and blocks like
 ## anybody), 1 at the muzzle (the default), 2 always (team-mates never block a shot).
 const CVAR_TEAMMATE_PASSTHROUGH := "mp_teammate_passthrough"
 
 ## 1 lets a shooter damage a team-mate, 0 refuses it. The default is whatever the game's [member rules] say when the cvar binds, so binding it changes no game's behaviour until an operator sets it.
 const CVAR_FRIENDLY_FIRE := "mp_friendlyfire"
 
-## 1 makes neck, hand and foot zones of their own with their own multipliers, 0 folds them into chest, arm and leg ([DotHitzone]).
+## 1 makes neck, hand and foot zones of their own with their own multipliers, 0 folds them into chest, arm and leg ([GSHitzone]).
 const CVAR_HITZONES := "mp_hitzones"
 
 const CVAR_PENETRATION := "sv_penetration"
@@ -369,7 +369,7 @@ func cvar_specs() -> Array[Dictionary]:
 ## Returns the cvars it made.
 ##
 ## [b]Duck-typed, because GameSpice Server is not a dependency of this addon[/b]; the same shape
-## as GameSpice NPC AI's `DotNpcAiSkill.bind_cvars`. A cvar needs a `changed(old, new)` signal and
+## as GameSpice NPC AI's `GSNpcAiSkill.bind_cvars`. A cvar needs a `changed(old, new)` signal and
 ## a `get_string()`; a range is used when it offers one.
 ##
 ## [b]Live:[/b] a change writes through to [member rules], which the resolver shares, so the
@@ -419,7 +419,7 @@ func _on_cvar_changed(_old: String, new_value: String, cvar_name: String) -> voi
 
 
 ## Keeps a client's [member rules] on the server's values of [method cvar_specs]' cvars, as
-## [param source] reports them: GameSpice Server's `DotClientLink`, or anything with a
+## [param source] reports them: GameSpice Server's `GSClientLink`, or anything with a
 ## `replicated_cvar(name, fallback) -> String` and a `replicated_cvar_changed(name, value)`
 ## signal. Applies what the source already holds, then every change. True when it is
 ## following.
@@ -438,7 +438,7 @@ func follow_cvars(source: Object) -> bool:
 	if source == null or not is_instance_valid(source):
 		return false
 	if not source.has_method(&"replicated_cvar") or not source.has_signal(&"replicated_cvar_changed"):
-		DotLog.debug(CHANNEL, "cvar source cannot replicate; keeping this manager's own rules", {
+		GSLog.debug(CHANNEL, "cvar source cannot replicate; keeping this manager's own rules", {
 			"source": source.get_class(),
 		})
 		return false
@@ -462,7 +462,7 @@ func _on_replicated_cvar(cvar_name: String, value: String) -> void:
 			return
 
 
-func _apply_splash(shot: DotShot) -> void:
+func _apply_splash(shot: GSShot) -> void:
 	var type := shot.splash_type
 
 	if type == null:
@@ -495,13 +495,13 @@ func _apply_splash(shot: DotShot) -> void:
 		if amount <= 0.0:
 			continue
 
-		var damage := DotDamage.make(shot.attacker, victim, amount, type)
+		var damage := GSDamage.make(shot.attacker, victim, amount, type)
 		damage.point = closest
 		damage.direction = (closest - centre).normalized()
 		# Distance is already spent on the splash falloff; feeding it to the damage
 		# type's falloff as well would apply two curves to one number.
 		damage.distance = 0.0
-		damage.hit_group = DotHitGroup.GENERIC
+		damage.hit_group = GSHitGroup.GENERIC
 		damage.weapon_id = shot.weapon_id
 		damage.tick = shot.tick
 
@@ -510,13 +510,13 @@ func _apply_splash(shot: DotShot) -> void:
 	trace.exclude = []
 
 
-func _apply_damages(shot: DotShot) -> void:
+func _apply_damages(shot: GSShot) -> void:
 	# Iterated by index and appended to inside the loop: a reflection is a new damage
 	# event that must itself be applied, and it belongs to the same shot.
 	var index := 0
 
 	while index < shot.damages.size():
-		var damage: DotDamage = shot.damages[index]
+		var damage: GSDamage = shot.damages[index]
 		index += 1
 
 		if damage.refused:
@@ -549,7 +549,7 @@ func limb_threshold(limb: StringName) -> float:
 	return float(limb_min_damage.get(String(limb), limb_min_damage.get(limb, limb_min_damage.get("default", 0.0))))
 
 
-func _emit_limb_hit(damage: DotDamage) -> void:
+func _emit_limb_hit(damage: GSDamage) -> void:
 	if damage.limb == &"" or damage.amount < limb_threshold(damage.limb):
 		return
 
@@ -574,7 +574,7 @@ func _emit_limb_hit(damage: DotDamage) -> void:
 ##
 ## Fall damage, drowning, a kill command, a scripted trap. Goes through the resolver
 ## and the same signals, so a kill feed and a scoreboard do not need a second path.
-func apply_damage(damage: DotDamage) -> DotDamage:
+func apply_damage(damage: GSDamage) -> GSDamage:
 	if damage == null:
 		return null
 
@@ -611,10 +611,10 @@ func explode(
 	radius: float,
 	damage_amount: float,
 	attacker: int = 0,
-	type: DotDamageType = null,
+	type: GSDamageType = null,
 	tick: int = 0
-) -> Array[DotDamage]:
-	var out: Array[DotDamage] = []
+) -> Array[GSDamage]:
+	var out: Array[GSDamage] = []
 
 	if type == null:
 		type = damage_type(&"")
@@ -634,10 +634,10 @@ func explode(
 		if amount <= 0.0:
 			continue
 
-		var damage := DotDamage.make(attacker, victim, amount * config.damage_scale, type)
+		var damage := GSDamage.make(attacker, victim, amount * config.damage_scale, type)
 		damage.point = closest
 		damage.direction = (closest - centre).normalized()
-		damage.hit_group = DotHitGroup.GENERIC
+		damage.hit_group = GSHitGroup.GENERIC
 		damage.tick = tick
 
 		out.append(apply_damage(damage))
@@ -659,13 +659,13 @@ func _entity_id_of(node: Node) -> int:
 
 # --- Advancing -------------------------------------------------------------
 
-## Advances regeneration on every registered [DotHealth].
+## Advances regeneration on every registered [GSHealth].
 ##
 ## Not automatic: a predicted entity is ticked by the simulation loop, and doing it
 ## here as well would run it twice at two different rates.
 func tick(current_tick: int, delta: float) -> void:
 	for key in _healths.keys():
-		var health: DotHealth = _healths[key]
+		var health: GSHealth = _healths[key]
 		if health != null and is_instance_valid(health):
 			health.tick(current_tick, delta)
 

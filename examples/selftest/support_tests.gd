@@ -6,7 +6,7 @@ extends "res://examples/selftest/damage_tests.gd"
 func _test_defib() -> void:
 	_section("defibrillator")
 
-	var d := DotDefib.new()
+	var d := GSDefib.new()
 	d.charges = 2
 	d.cooldown_seconds = 5.0
 	d.reach = 2.0
@@ -26,7 +26,7 @@ func _test_defib() -> void:
 
 
 func _sentry_step_checks() -> void:
-	var sentry := DotSentry.new(Vector3.ZERO, 0.0)
+	var sentry := GSSentry.new(Vector3.ZERO, 0.0)
 	sentry.interval = 0.5
 	sentry.lifetime = 10.0
 	sentry.ammo = 3
@@ -46,7 +46,7 @@ func _sentry_step_checks() -> void:
 
 	# A target behind it needs turning to: no shot until the barrel is on it.
 	var behind := {"id": 9, "at": Vector3(0.0, 1.0, 6.0)}
-	var turned := DotSentry.new(Vector3.ZERO, 0.0)
+	var turned := GSSentry.new(Vector3.ZERO, 0.0)
 	turned.turn_rate = 90.0
 	var first := turned.step(0.5, 1.0, [behind], see_all)
 	_check(first.is_empty() and absf(turned.yaw) > 0.5, "it turns before it fires", str(turned.yaw))
@@ -59,7 +59,7 @@ func _sentry_step_checks() -> void:
 	_check(fired_at > 1.5, "and fires once it is round", str(fired_at))
 
 	# Held target: stays on the first while a nearer one appears.
-	var holder := DotSentry.new(Vector3.ZERO, 0.0)
+	var holder := GSSentry.new(Vector3.ZERO, 0.0)
 	var _a := holder.step(0.1, 0.1, [near], see_all)
 	var nearer := {"id": 10, "at": Vector3(0.0, 1.0, -2.0)}
 	var _b := holder.step(0.1, 0.2, [near, nearer], see_all)
@@ -67,10 +67,10 @@ func _sentry_step_checks() -> void:
 	_check(holder.step(0.1, 9.0, [near], func(_x, _y) -> bool: return false).is_empty() and holder.target_id == -1,
 		"a target behind cover is dropped")
 
-	var empty := DotSentry.new(Vector3.ZERO, 0.0)
+	var empty := GSSentry.new(Vector3.ZERO, 0.0)
 	empty.ammo = 0
 	_check(empty.expired(0.0), "no ammunition is expired")
-	var timed := DotSentry.new(Vector3.ZERO, 5.0)
+	var timed := GSSentry.new(Vector3.ZERO, 5.0)
 	timed.lifetime = 10.0
 	_check(not timed.expired(14.0) and timed.expired(15.0), "a lifetime runs from its birth")
 	_close(timed.seconds_left(12.0), 3.0, "and counts down")
@@ -114,17 +114,17 @@ func _test_sentry() -> void:
 	var space := floor_body.get_world_3d().direct_space_state
 	var eye := Vector3(0.0, 1.6, 0.0)
 
-	var ok := DotSentry.find_spot(space, eye, Vector3.FORWARD, 1, 2.5)
+	var ok := GSSentry.find_spot(space, eye, Vector3.FORWARD, 1, 2.5)
 	_check(ok.ok and absf((ok.value["position"] as Vector3).y) < 0.05, "a spot on open floor is found")
 	_close((ok.value["position"] as Vector3).z, -2.5, "about the reach ahead", 0.1)
 
-	var by_wall := DotSentry.find_spot(space, Vector3(0.0, 1.6, -10.0), Vector3.FORWARD, 1, 4.0)
+	var by_wall := GSSentry.find_spot(space, Vector3(0.0, 1.6, -10.0), Vector3.FORWARD, 1, 4.0)
 	_check(by_wall.ok and (by_wall.value["position"] as Vector3).z > -11.8, "a wall pulls the spot back in front of it")
 
-	var under := DotSentry.find_spot(space, Vector3(15.0, 0.8, 3.0), Vector3.FORWARD, 1, 3.0)
+	var under := GSSentry.find_spot(space, Vector3(15.0, 0.8, 3.0), Vector3.FORWARD, 1, 3.0)
 	_check(not under.ok and under.error.detail == "headroom", "no room under a low ceiling", str(under.error.detail if not under.ok else ""))
 
-	var off_edge := DotSentry.find_spot(space, Vector3(0.0, 1.6, 19.0), Vector3.BACK, 1, 4.0)
+	var off_edge := GSSentry.find_spot(space, Vector3(0.0, 1.6, 19.0), Vector3.BACK, 1, 4.0)
 	_check(not off_edge.ok and off_edge.error.detail == "no_floor", "no floor past the edge")
 
 	floor_body.queue_free()
@@ -136,30 +136,30 @@ func _test_sentry() -> void:
 func _test_damage_immunity() -> void:
 	_section("damage immunity: per kind, wildcard, default none")
 
-	var imm := DotDamageImmunity.new()
+	var imm := GSDamageImmunity.new()
 	_check(not imm.is_immune(5, &"fall"), "nobody is immune by default")
 	imm.set_immune(5, [&"fall", "fire"])
 	_check(imm.is_immune(5, &"fall") and imm.is_immune(5, &"fire"), "listed kinds are ignored (strings too)")
 	_check(not imm.is_immune(5, &"bullet") and not imm.is_immune(6, &"fall"), "other kinds and other entities are not")
-	imm.set_immune(5, [DotDamageImmunity.ALL])
+	imm.set_immune(5, [GSDamageImmunity.ALL])
 	_check(imm.is_immune(5, &"bullet"), "the wildcard covers every kind")
 	imm.set_immune(5, [])
 	_check(not imm.is_immune(5, &"fall") and imm.kinds_of(5).is_empty(), "an empty list clears it")
 
-	var rules := DotDamageRules.new()
-	var res := DotDamageResolver.with_rules(rules)
-	var fall := DotDamageType.new()
+	var rules := GSDamageRules.new()
+	var res := GSDamageResolver.with_rules(rules)
+	var fall := GSDamageType.new()
 	fall.id = &"fall"
-	var bullet := DotDamageType.new()
+	var bullet := GSDamageType.new()
 	bullet.id = &"bullet"
-	var plain := res.resolve(DotDamage.make(0, 5, 30.0, fall))
+	var plain := res.resolve(GSDamage.make(0, 5, 30.0, fall))
 	_check(not plain.refused, "no immunity object: damage lands")
-	res.immunity = DotDamageImmunity.new()
+	res.immunity = GSDamageImmunity.new()
 	res.immunity.set_immune(5, [&"fall"])
-	var blocked := res.resolve(DotDamage.make(0, 5, 30.0, fall))
+	var blocked := res.resolve(GSDamage.make(0, 5, 30.0, fall))
 	_check(blocked.refused and blocked.refusal.contains("immune"), "an immune victim refuses that kind")
-	_check(not res.resolve(DotDamage.make(0, 5, 30.0, bullet)).refused, "the same victim still takes another kind")
-	_check(not res.resolve(DotDamage.make(0, 6, 30.0, fall)).refused, "another victim still takes it")
+	_check(not res.resolve(GSDamage.make(0, 5, 30.0, bullet)).refused, "the same victim still takes another kind")
+	_check(not res.resolve(GSDamage.make(0, 6, 30.0, fall)).refused, "another victim still takes it")
 	_done()
 
 

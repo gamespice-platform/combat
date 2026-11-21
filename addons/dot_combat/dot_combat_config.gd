@@ -1,8 +1,8 @@
 @tool
-class_name DotCombatConfig
-extends DotConfig
+class_name GSCombatConfig
+extends GSConfig
 
-## Everything configurable about combat. Layered like every [DotConfig]: exported
+## Everything configurable about combat. Layered like every [GSConfig]: exported
 ## defaults, then a JSON file, then [code]DOT_COMBAT_*[/code] environment variables,
 ## then [code]--combat-*[/code] arguments.
 
@@ -64,7 +64,7 @@ extends DotConfig
 
 @export_group("Damage")
 
-## Applied when a weapon names no [DotDamageType]. Created on demand.
+## Applied when a weapon names no [GSDamageType]. Created on demand.
 @export var default_damage_type: StringName = &"bullet"
 
 ## Multiplies all damage. For a mod, for a warmup round, and for testing.
@@ -87,9 +87,9 @@ func cli_prefix() -> String:
 	return "--combat-"
 
 
-func validate() -> DotResult:
+func validate() -> GSResult:
 	if max_rewind_ms > 0.0 and not lag_compensation:
-		DotLog.debug(
+		GSLog.debug(
 			"combat.config",
 			"max_rewind_ms is set but lag compensation is off; it will not be used"
 		)
@@ -99,18 +99,18 @@ func validate() -> DotResult:
 		# real client achieves — its position is a tick ahead by construction. The
 		# result is every shot being relocated to the server's origin, which is safe
 		# and makes the game feel broken.
-		DotLog.warn(
+		GSLog.warn(
 			"combat.config",
 			"max_origin_error of 0 relocates every shot to the server's own position"
 		)
 
 	if damage_scale <= 0.0:
-		return DotResult.fail(
-			DotError.CODE_INVALID,
+		return GSResult.fail(
+			GSError.CODE_INVALID,
 			"damage_scale of %.2f means no weapon can ever do damage." % damage_scale
 		)
 
-	return DotResult.success(null)
+	return GSResult.success(null)
 
 
 func rewind_slack_sec() -> float:

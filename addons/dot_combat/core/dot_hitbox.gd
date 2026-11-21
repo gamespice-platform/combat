@@ -1,5 +1,5 @@
 @tool
-class_name DotHitbox
+class_name GSHitbox
 extends Node3D
 
 ## One region of an entity that a shot can land in, tested analytically.
@@ -18,7 +18,7 @@ extends Node3D
 ## not.
 ##
 ## The physics world is still consulted, once, for the terrain the ray might hit on
-## the way. See [DotTracePhysics].
+## the way. See [GSTracePhysics].
 
 enum Shape {
 	## A capsule along local Y. The default; what a limb or a torso is.
@@ -29,9 +29,9 @@ enum Shape {
 	SPHERE,
 }
 
-## Which region this is, for [DotHitGroup]. Empty means
-## [constant DotHitGroup.GENERIC].
-@export var group: StringName = DotHitGroup.CHEST
+## Which region this is, for [GSHitGroup]. Empty means
+## [constant GSHitGroup.GENERIC].
+@export var group: StringName = GSHitGroup.CHEST
 
 @export var shape: Shape = Shape.CAPSULE
 
@@ -67,22 +67,22 @@ enum Shape {
 @export_range(0, 100, 1) var precedence: int = 0
 
 ## The entity this belongs to, resolved once. Empty resolves to the nearest ancestor
-## carrying a [DotHealth], which is what a player scene almost always wants.
-@export var owner_ref: DotNodeRef = null
+## carrying a [GSHealth], which is what a player scene almost always wants.
+@export var owner_ref: GSNodeRef = null
 
 var _owner: Node = null
 
 
-## What a ray found. Returned by [method intersect_ray] and by [DotTrace].
+## What a ray found. Returned by [method intersect_ray] and by [GSTrace].
 class Hit extends RefCounted:
 	## Distance along the ray, in metres. Negative means no hit.
 	var distance: float = -1.0
 	var point: Vector3 = Vector3.ZERO
 	var normal: Vector3 = Vector3.ZERO
-	var hitbox: DotHitbox = null
-	var group: StringName = DotHitGroup.GENERIC
+	var hitbox: GSHitbox = null
+	var group: StringName = GSHitGroup.GENERIC
 
-	## The hitbox's [member DotHitbox.limb], empty when it has none.
+	## The hitbox's [member GSHitbox.limb], empty when it has none.
 	var limb: StringName = &""
 
 	## The entity that owns whatever was hit. Null for world geometry.
@@ -131,14 +131,14 @@ func resolve_owner() -> Node:
 		if _owner != null:
 			return _owner
 
-	# Nearest ancestor that has a DotHealth among its children. A player scene is
-	# Player{DotHealth, Model{Hitbox...}}, so the hitbox is several levels below the
+	# Nearest ancestor that has a GSHealth among its children. A player scene is
+	# Player{GSHealth, Model{Hitbox...}}, so the hitbox is several levels below the
 	# thing that owns the health, and "my parent" is the wrong answer more often than
 	# it is the right one.
 	var node: Node = get_parent()
 	while node != null:
 		for child in node.get_children():
-			if child is DotHealth:
+			if child is GSHealth:
 				_owner = node
 				return _owner
 		node = node.get_parent()
@@ -152,7 +152,7 @@ func entity_owner() -> Node:
 
 
 func effective_group() -> StringName:
-	return group if group != &"" else DotHitGroup.GENERIC
+	return group if group != &"" else GSHitGroup.GENERIC
 
 
 ## Intersects a world-space ray, returning the entry distance or -1.

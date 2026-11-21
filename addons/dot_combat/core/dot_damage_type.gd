@@ -1,5 +1,5 @@
 @tool
-class_name DotDamageType
+class_name GSDamageType
 extends Resource
 
 ## A kind of damage, and everything the rules need to know about it.
@@ -68,8 +68,8 @@ extends Resource
 @export var lethal_is_final: bool = true
 
 
-static func make(p_id: StringName, p_display_name: String = "") -> DotDamageType:
-	var t := DotDamageType.new()
+static func make(p_id: StringName, p_display_name: String = "") -> GSDamageType:
+	var t := GSDamageType.new()
 	t.id = p_id
 	t.display_name = p_display_name if p_display_name != "" else String(p_id).capitalize()
 	return t
@@ -106,4 +106,4 @@ func describe() -> Dictionary:
 
 
 func _to_string() -> String:
-	return "DotDamageType(%s)" % id
+	return "GSDamageType(%s)" % id

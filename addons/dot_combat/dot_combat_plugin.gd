@@ -4,29 +4,29 @@ extends EditorPlugin
 ## Editor entry point for GameSpice Combat. Registers inspector types only.
 ##
 ## No autoload, for the family's reason: a process may run a server and a client at
-## once, and a singleton combat manager makes that impossible. [DotCombatManager]
-## registers itself in [DotRegistry] instead.
+## once, and a singleton combat manager makes that impossible. [GSCombatManager]
+## registers itself in [GSRegistry] instead.
 
 const _ICON := "res://addons/dot_combat/icon_placeholder.svg"
 
 const _TYPES := [
 	[
-		"DotCombatManager",
+		"GSCombatManager",
 		"Node",
 		"res://addons/dot_combat/dot_combat_manager.gd",
 	],
 	[
-		"DotHealth",
+		"GSHealth",
 		"Node",
 		"res://addons/dot_combat/core/dot_health.gd",
 	],
 	[
-		"DotHitbox",
+		"GSHitbox",
 		"Node3D",
 		"res://addons/dot_combat/core/dot_hitbox.gd",
 	],
 	[
-		"DotHitboxSet",
+		"GSHitboxSet",
 		"Node3D",
 		"res://addons/dot_combat/core/dot_hitbox_set.gd",
 	],

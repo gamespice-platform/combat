@@ -1,14 +1,14 @@
 @tool
-class_name DotHealth
+class_name GSHealth
 extends Node
 
 ## Health, armour and being alive. The node every damageable thing has one of.
 ##
-## [b]This is a plain [Node], not a [code]DotNetBehaviour[/code].[/b] Only GameSpice Core is
+## [b]This is a plain [Node], not a [code]GSNetBehaviour[/code].[/b] Only GameSpice Core is
 ## a hard dependency in this family, and a script that so much as [i]mentions[/i] a
 ## [code]class_name[/code] the project does not have fails to parse — taking every
 ## script that references it down with it. So the numbers live here and
-## [DotCombatNetSync] describes how to replicate them, without either file naming
+## [GSCombatNetSync] describes how to replicate them, without either file naming
 ## GameSpice Net. See this project's docs/design.md for the bridge.
 ##
 ## [b]Applying damage is deterministic and takes no wall-clock time.[/b] Regeneration
@@ -17,17 +17,17 @@ extends Node
 ## [method Time.get_ticks_msec] on two machines never does.
 
 # No log channel: per-hit state on every damageable thing, whose every change is a
-# signal. DotCombatManager logs each hit it applies, at DEBUG, with the whole damage
+# signal. GSCombatManager logs each hit it applies, at DEBUG, with the whole damage
 # record; a line from here as well would be the same hit twice.
 
-## Damage was applied. Carries the [DotDamage] with its outcome fields filled in.
-signal damaged(damage: DotDamage)
+## Damage was applied. Carries the [GSDamage] with its outcome fields filled in.
+signal damaged(damage: GSDamage)
 
 ## Health went up. [param amount] is what actually landed after the cap.
 signal healed(amount: float, source: int)
 
 ## Health reached zero. Fires exactly once per life.
-signal died(damage: DotDamage)
+signal died(damage: GSDamage)
 
 ## [method revive] was called on a dead entity.
 signal revived()
@@ -99,7 +99,7 @@ var damage_taken: float = 0.0
 
 ## What killed this entity, kept until the next [method reset]. Null when alive or
 ## when death had no attributable cause.
-var last_fatal: DotDamage = null
+var last_fatal: GSDamage = null
 
 var _tick_rate: int = 60
 
@@ -141,14 +141,14 @@ func reset(tick: int = 0) -> void:
 ##
 ## Returns the event either way — a refusal is not a failure, it is an outcome the
 ## caller usually wants to see. Callers that only care whether anything landed check
-## [member DotDamage.health_lost].
+## [member GSDamage.health_lost].
 ##
 ## [b]The event is mutated, not copied.[/b] The resolver has already written its
-## scaling trace into it and a rules hook may have adjusted [member DotDamage.amount];
+## scaling trace into it and a rules hook may have adjusted [member GSDamage.amount];
 ## copying here would silently discard both.
-func apply(damage: DotDamage) -> DotDamage:
+func apply(damage: GSDamage) -> GSDamage:
 	if damage == null:
-		push_error("DotHealth.apply() called with null.")
+		push_error("GSHealth.apply() called with null.")
 		return null
 
 	if not alive:
@@ -316,7 +316,7 @@ func fraction() -> float:
 ##   [code]health / (1 - share)[/code].
 ## - It does: the rest arrives undiminished, so death comes at
 ##   [code]health + armour / wear[/code].
-func effective_health(type: DotDamageType) -> float:
+func effective_health(type: GSDamageType) -> float:
 	if type == null or type.armour_share <= 0.0 or armour <= 0.0:
 		return health
 

@@ -1,15 +1,15 @@
-class_name DotPelletTracer
+class_name GSPelletTracer
 extends RefCounted
-## Walks one pellet through the world for a [DotCombatManager]: walls, panes, ricochets and bodies it passes spend the round's penetration power.
+## Walks one pellet through the world for a [GSCombatManager]: walls, panes, ricochets and bodies it passes spend the round's penetration power.
 ##
 ## Held by the manager and given back to it for every field it reads; it owns no state between pellets.
 
-var m: DotCombatManager = null
+var m: GSCombatManager = null
 
-var _shot: DotShot = null
+var _shot: GSShot = null
 var _pellet: int = 0
-var _type: DotDamageType = null
-var _pen: DotPenetration = null
+var _type: GSDamageType = null
+var _pen: GSPenetration = null
 var _direction: Vector3 = Vector3.ZERO
 var _from: Vector3 = Vector3.ZERO
 var _remaining: float = 0.0
@@ -22,19 +22,19 @@ var _skip: Array = []
 var _skip_rids: Array[RID] = []
 
 
-func _init(manager: DotCombatManager) -> void:
+func _init(manager: GSCombatManager) -> void:
 	m = manager
 
 
-## One pellet: walls and (under [member DotCombatManager.penetration_players]) bodies it passes spend [param pen]'s power, damage falls with what is left.
-func trace_pellet(shot: DotShot, pellet: int, type: DotDamageType, pen: DotPenetration, excluded: Array) -> void:
+## One pellet: walls and (under [member GSCombatManager.penetration_players]) bodies it passes spend [param pen]'s power, damage falls with what is left.
+func trace_pellet(shot: GSShot, pellet: int, type: GSDamageType, pen: GSPenetration, excluded: Array) -> void:
 	var base_rids := m.trace.exclude_rids
 	_begin(shot, pellet, type, pen, excluded, base_rids)
 	_walk()
 	m.trace.exclude_rids = base_rids
 
 
-func _begin(shot: DotShot, pellet: int, type: DotDamageType, pen: DotPenetration, excluded: Array, base_rids: Array[RID]) -> void:
+func _begin(shot: GSShot, pellet: int, type: GSDamageType, pen: GSPenetration, excluded: Array, base_rids: Array[RID]) -> void:
 	_shot = shot
 	_pellet = pellet
 	_type = type
@@ -79,7 +79,7 @@ func _advance(to: Vector3, distance: float) -> bool:
 
 
 ## A wall, pane or open sky hit. True to keep walking.
-func _step_world(hit: DotHitbox.Hit, can_pass: bool) -> bool:
+func _step_world(hit: GSHitbox.Hit, can_pass: bool) -> bool:
 	# A pane (anything with hurt() and is_broken()) takes the shot's damage and lets it through once broken.
 	var pane := hit.collider as Node
 	if pane != null and pane.has_method(&"hurt") and pane.has_method(&"is_broken"):
@@ -93,7 +93,7 @@ func _step_world(hit: DotHitbox.Hit, can_pass: bool) -> bool:
 	if m._ricochets_off(hit, _direction, _pen, _bounces):
 		return _ricochet(hit)
 
-	var exit: DotHitbox.Hit = null
+	var exit: GSHitbox.Hit = null
 	if can_pass:
 		exit = hit if hit.inside_start else wall_exit(hit, _direction, _pen)
 	var sheet := false
@@ -121,7 +121,7 @@ func _step_world(hit: DotHitbox.Hit, can_pass: bool) -> bool:
 	return _advance(exit.point + _direction * 0.01, hit.distance if hit.inside_start else hit.distance + thickness)
 
 
-func _ricochet(hit: DotHitbox.Hit) -> bool:
+func _ricochet(hit: GSHitbox.Hit) -> bool:
 	var grazing := rad_to_deg(asin(clampf(absf(_direction.dot(hit.normal)), 0.0, 1.0)))
 	_direction = _direction.bounce(hit.normal).normalized()
 	_power *= _pen.ricochet_keep
@@ -140,7 +140,7 @@ func _ricochet(hit: DotHitbox.Hit) -> bool:
 
 
 ## A body hit: damage it, and keep walking when the round can pass through. True to keep walking.
-func _step_body(hit: DotHitbox.Hit, can_pass: bool) -> bool:
+func _step_body(hit: GSHitbox.Hit, can_pass: bool) -> bool:
 	var victim := m._entity_id_of(hit.entity)
 
 	if victim == 0:
@@ -148,7 +148,7 @@ func _step_body(hit: DotHitbox.Hit, can_pass: bool) -> bool:
 		return false
 
 	var strength := _pen.strength(_power) if _pen != null and (_passes > 0 or _bounces > 0) else 1.0
-	var damage := DotDamage.make(
+	var damage := GSDamage.make(
 		_shot.attacker,
 		victim,
 		_shot.damage * m.config.damage_scale * strength,
@@ -156,7 +156,7 @@ func _step_body(hit: DotHitbox.Hit, can_pass: bool) -> bool:
 	)
 	damage.hit_group = hit.group
 	damage.limb = hit.limb
-	DotHitzone.annotate(damage, hit, _direction)
+	GSHitzone.annotate(damage, hit, _direction)
 	damage.context["entity"] = hit.entity
 	if _passes > 0:
 		damage.context["penetrated"] = _passes
@@ -178,7 +178,7 @@ func _step_body(hit: DotHitbox.Hit, can_pass: bool) -> bool:
 		_shot.impacts.append(hit.point)
 		return false
 
-	_power -= _pen.body_cost_of(hit.group if m.rules.hitzones else DotHitzone.coarse(hit.group), _pen.speed_factor(_power))
+	_power -= _pen.body_cost_of(hit.group if m.rules.hitzones else GSHitzone.coarse(hit.group), _pen.speed_factor(_power))
 	if _power <= 0.0:
 		_shot.impacts.append(hit.point)
 		return false
@@ -192,8 +192,8 @@ func _step_body(hit: DotHitbox.Hit, can_pass: bool) -> bool:
 	return _advance(hit.point + _direction * 0.01, hit.distance)
 
 
-## The far face of the wall [param hit] is on: a ray from [member DotPenetration.max_depth] beyond it, back, against the world only. Null when there is none (a one-sided sheet, or thicker than the depth).
-func wall_exit(hit: DotHitbox.Hit, direction: Vector3, pen: DotPenetration) -> DotHitbox.Hit:
+## The far face of the wall [param hit] is on: a ray from [member GSPenetration.max_depth] beyond it, back, against the world only. Null when there is none (a one-sided sheet, or thicker than the depth).
+func wall_exit(hit: GSHitbox.Hit, direction: Vector3, pen: GSPenetration) -> GSHitbox.Hit:
 	var far := hit.point + direction * pen.max_depth
 	var saved := m.trace.exclude
 	m.trace.exclude = m._set_list.duplicate()
@@ -204,12 +204,12 @@ func wall_exit(hit: DotHitbox.Hit, direction: Vector3, pen: DotPenetration) -> D
 	return back
 
 
-## A far face invented for a one-sided sheet: [member DotCombatManager.sheet_thickness] of the material beyond the entry, or null when its thickness is not known (then the round stops).
-func sheet_exit(hit: DotHitbox.Hit, direction: Vector3) -> DotHitbox.Hit:
+## A far face invented for a one-sided sheet: [member GSCombatManager.sheet_thickness] of the material beyond the entry, or null when its thickness is not known (then the round stops).
+func sheet_exit(hit: GSHitbox.Hit, direction: Vector3) -> GSHitbox.Hit:
 	var thickness := float(m.sheet_thickness.get(hit.material, m.sheet_thickness.get(String(hit.material), 0.0)))
 	if thickness <= 0.0:
 		return null
-	var out := DotHitbox.Hit.new()
+	var out := GSHitbox.Hit.new()
 	out.distance = hit.distance + thickness
 	out.point = hit.point + direction * thickness
 	out.normal = -hit.normal

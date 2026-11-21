@@ -1,4 +1,4 @@
-class_name DotDamageResolver
+class_name GSDamageResolver
 extends RefCounted
 
 ## Turns a raw hit into the number that will actually be applied.
@@ -13,12 +13,12 @@ extends RefCounted
 ## a number three later multipliers can exceed.
 
 # No log channel: a pure function per hit. Every scale it applies is recorded on the
-# damage itself, and DotCombatManager logs that record -- which is how a surprising
+# damage itself, and GSCombatManager logs that record -- which is how a surprising
 # number is explained, as the class docs say, rather than by a line per step.
 
-var rules: DotDamageRules = null
+var rules: GSDamageRules = null
 
-var hit_groups: DotHitGroup = null
+var hit_groups: GSHitGroup = null
 
 ## id -> team. Returns an int; anything falsy means "no team", and two entities with
 ## no team are never team-mates — a free-for-all must not accidentally become a truce.
@@ -26,34 +26,34 @@ var hit_groups: DotHitGroup = null
 ## Left unset, nobody is on a team and friendly fire never applies.
 var team_of: Callable = Callable()
 
-## Called after the standard rules and before clamping, with the [DotDamage].
+## Called after the standard rules and before clamping, with the [GSDamage].
 ##
 ## The extension point for a game mode's own arithmetic: a damage boost pickup, a
 ## round-start immunity, a mode where the leader takes double. Mutating
-## [member DotDamage.amount] or calling [method DotDamage.refuse] both work.
+## [member GSDamage.amount] or calling [method GSDamage.refuse] both work.
 var adjust: Callable = Callable()
 
 ## Per-entity immunity to whole damage kinds (a class that ignores falls). Null means none.
-var immunity: DotDamageImmunity = null
+var immunity: GSDamageImmunity = null
 
 
-static func with_rules(p_rules: DotDamageRules) -> DotDamageResolver:
-	var resolver := DotDamageResolver.new()
+static func with_rules(p_rules: GSDamageRules) -> GSDamageResolver:
+	var resolver := GSDamageResolver.new()
 	resolver.rules = p_rules
-	resolver.hit_groups = DotHitGroup.defaults()
+	resolver.hit_groups = GSHitGroup.defaults()
 	return resolver
 
 
 ## Applies every rule to [param damage] and returns it.
 ##
 ## The same object comes back, mutated. A refusal is an outcome, not a failure — see
-## [member DotDamage.refused].
-func resolve(damage: DotDamage) -> DotDamage:
+## [member GSDamage.refused].
+func resolve(damage: GSDamage) -> GSDamage:
 	if damage == null:
 		return null
 
 	if rules == null:
-		rules = DotDamageRules.new()
+		rules = GSDamageRules.new()
 
 	var type := damage.type
 
@@ -80,7 +80,7 @@ func resolve(damage: DotDamage) -> DotDamage:
 		damage.scale_by(type.falloff_scale(damage.distance), "falloff")
 
 	if rules.hit_groups and type.uses_hit_groups and hit_groups != null:
-		damage.scale_by(hit_groups.multiplier(damage.hit_group if rules.hitzones else DotHitzone.coarse(damage.hit_group)), "group")
+		damage.scale_by(hit_groups.multiplier(damage.hit_group if rules.hitzones else GSHitzone.coarse(damage.hit_group)), "group")
 
 	damage.critical = is_critical(damage)
 
@@ -104,7 +104,7 @@ func resolve(damage: DotDamage) -> DotDamage:
 
 ## Whether [param damage] is a critical hit under these rules. Pure: the same hit gives
 ## the same answer on every machine and every replay. Self and world damage never are.
-func is_critical(damage: DotDamage) -> bool:
+func is_critical(damage: GSDamage) -> bool:
 	if rules == null or damage.is_self_damage() or damage.attacker == 0:
 		return false
 
@@ -118,7 +118,7 @@ func is_critical(damage: DotDamage) -> bool:
 
 
 ## A number in [0, 1) that is a function of the hit and nothing else.
-static func critical_roll(damage: DotDamage) -> float:
+static func critical_roll(damage: GSDamage) -> float:
 	var key := "%d|%d|%d|%s" % [damage.attacker, damage.victim, damage.tick, damage.weapon_id]
 	# The text's own hash, not hash() of an Array: a String's hash is its characters, which
 	# is the same on every build of the engine the family runs.
@@ -131,7 +131,7 @@ static func critical_roll(damage: DotDamage) -> float:
 ## reflects what actually landed. Deliberately not resolved again: running it back
 ## through [method resolve] would apply the friendly scale a second time, and would
 ## then be refused as self damage in any mode with self damage off.
-func reflection(damage: DotDamage) -> DotDamage:
+func reflection(damage: GSDamage) -> GSDamage:
 	if rules == null or rules.friendly_reflect <= 0.0:
 		return null
 
@@ -144,7 +144,7 @@ func reflection(damage: DotDamage) -> DotDamage:
 	if damage.is_self_damage():
 		return null
 
-	var back := DotDamage.make(
+	var back := GSDamage.make(
 		damage.victim,
 		damage.attacker,
 		damage.health_lost * rules.friendly_reflect,
@@ -152,7 +152,7 @@ func reflection(damage: DotDamage) -> DotDamage:
 	)
 	back.tick = damage.tick
 	back.weapon_id = damage.weapon_id
-	back.hit_group = DotHitGroup.GENERIC
+	back.hit_group = GSHitGroup.GENERIC
 	back.context["reflected_from"] = damage.attacker
 	return back
 
@@ -161,7 +161,7 @@ func reflection(damage: DotDamage) -> DotDamage:
 ## itself, for entity 0 (the world), or for two players with no team (team 0).
 ##
 ## Public because the manager asks it before a shot is traced, not only after a hit: see
-## [method DotCombatManager.pass_through_sets].
+## [method GSCombatManager.pass_through_sets].
 func are_team_mates(a: int, b: int) -> bool:
 	return _same_team(a, b)
 

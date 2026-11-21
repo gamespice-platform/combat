@@ -1,4 +1,4 @@
-class_name DotDefib
+class_name GSDefib
 extends RefCounted
 
 ## A defibrillator as data: what one may do, how many times, and why it refused.
@@ -25,21 +25,21 @@ var move_tolerance: float = 0.6
 var ready_at: float = 0.0
 
 
-## Ok when a try may start, or a [DotError.CODE_STATE] failure whose message says why.
-func check(now: float, body_age: float, distance: float) -> DotResult:
+## Ok when a try may start, or a [GSError.CODE_STATE] failure whose message says why.
+func check(now: float, body_age: float, distance: float) -> GSResult:
 	if charges <= 0:
-		return DotResult.fail(DotError.CODE_STATE, "The defibrillator is spent.")
+		return GSResult.fail(GSError.CODE_STATE, "The defibrillator is spent.")
 
 	if now < ready_at:
-		return DotResult.fail(DotError.CODE_STATE, "The defibrillator is recharging.")
+		return GSResult.fail(GSError.CODE_STATE, "The defibrillator is recharging.")
 
 	if distance > reach:
-		return DotResult.fail(DotError.CODE_STATE, "Too far from the body.")
+		return GSResult.fail(GSError.CODE_STATE, "Too far from the body.")
 
 	if max_body_age > 0.0 and body_age > max_body_age:
-		return DotResult.fail(DotError.CODE_STATE, "Too late: the body is past saving.")
+		return GSResult.fail(GSError.CODE_STATE, "Too late: the body is past saving.")
 
-	return DotResult.success(true)
+	return GSResult.success(true)
 
 
 ## Takes one charge and starts the cooldown, at [param now].

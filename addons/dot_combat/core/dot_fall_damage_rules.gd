@@ -1,6 +1,6 @@
-class_name DotFallDamageRules
+class_name GSFallDamageRules
 extends RefCounted
-## The numbers of fall damage, shared by every [DotFallDamage] in a game, as three server cvars.
+## The numbers of fall damage, shared by every [GSFallDamage] in a game, as three server cvars.
 ## Off by default. Pure functions ([method damage_for]) so a selftest and the server agree without a scene.
 
 signal changed
@@ -73,7 +73,7 @@ var legs_speed: float = 0.6:
 ## Situations that absorb a landing (a subset of [constant CONTEXTS]). Water always did.
 var absorbs: Dictionary = {&"water": true, &"ladder": true, &"vehicle": true, &"noclip": true, &"protected": true}
 
-## Surface ids ([member DotFpsState.surface]) that absorb a landing: snow, mud, a mattress.
+## Surface ids ([member GSFpsState.surface]) that absorb a landing: snow, mud, a mattress.
 var soft_surfaces: Array[StringName] = []
 
 
@@ -130,7 +130,7 @@ func _absorb_specs() -> Array[Dictionary]:
 
 
 ## Registers the cvars through [param add] (a server module's `add_cvar`, duck-typed like
-## [method DotCombatManager.bind_cvars]) and follows them live. Returns the cvars made.
+## [method GSCombatManager.bind_cvars]) and follows them live. Returns the cvars made.
 func bind_cvars(add: Callable, flags: int = 0) -> Array:
 	var made: Array = []
 
@@ -163,7 +163,7 @@ func set_cvar(cvar_name: String, value: String) -> bool:
 	var text := value.strip_edges()
 
 	if not text.is_valid_float():
-		DotLog.warn(CHANNEL, "cvar is not a number; left as it was", {"cvar": cvar_name, "value": value})
+		GSLog.warn(CHANNEL, "cvar is not a number; left as it was", {"cvar": cvar_name, "value": value})
 		return false
 
 	match cvar_name:
@@ -194,7 +194,7 @@ func set_cvar(cvar_name: String, value: String) -> bool:
 
 			absorbs[ctx] = text.to_float() != 0.0
 
-	DotLog.debug(CHANNEL, "fall damage rule set", {"cvar": cvar_name, "value": text})
+	GSLog.debug(CHANNEL, "fall damage rule set", {"cvar": cvar_name, "value": text})
 	return true
 
 

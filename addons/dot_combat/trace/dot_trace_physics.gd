@@ -1,10 +1,10 @@
-class_name DotTracePhysics
-extends DotTrace
+class_name GSTracePhysics
+extends GSTrace
 
 ## Traces world geometry against Godot's 3D physics space.
 ##
 ## The backend a real game uses. Only world geometry goes through the physics server;
-## entity hitboxes stay analytic — see [DotHitbox] for why that distinction is the
+## entity hitboxes stay analytic — see [GSHitbox] for why that distinction is the
 ## whole point.
 
 const CHANNEL := "combat.trace"
@@ -16,7 +16,7 @@ var _world: World3D = null
 var _query := PhysicsRayQueryParameters3D.new()
 
 
-static func for_world(world: World3D) -> DotTracePhysics:
+static func for_world(world: World3D) -> GSTracePhysics:
 	# Not this class's own name. A script that names itself in an expression, loaded after
 	# its base, cuts Godot 4.7.2's exit teardown short and leaks every script loaded before
 	# it. See docs/gdscript-hazards.md, "A script that names itself".
@@ -34,14 +34,14 @@ static func for_world(world: World3D) -> DotTracePhysics:
 ## victim used to be twice over. Fetching it per query is a property read.
 func bind(world: World3D) -> void:
 	if world == null:
-		DotLog.warn(CHANNEL, "bound to a null world; every trace will miss")
+		GSLog.warn(CHANNEL, "bound to a null world; every trace will miss")
 		return
 	_world = world
 
 
 func bind_from_node(node: Node3D) -> void:
 	if node == null or not node.is_inside_tree():
-		DotLog.warn(CHANNEL, "bind_from_node() on a node outside the tree")
+		GSLog.warn(CHANNEL, "bind_from_node() on a node outside the tree")
 		return
 	bind(node.get_world_3d())
 
@@ -50,8 +50,8 @@ func _world_ray(
 	from: Vector3,
 	direction: Vector3,
 	max_distance: float
-) -> DotHitbox.Hit:
-	var miss := DotHitbox.Hit.new()
+) -> GSHitbox.Hit:
+	var miss := GSHitbox.Hit.new()
 
 	if _world == null:
 		return miss
@@ -61,7 +61,7 @@ func _world_ray(
 	if space == null:
 		# Outside a physics step there is no space state at all. Reporting a miss
 		# would make every wall transparent, so say so instead.
-		DotLog.warn(CHANNEL, "no space state; trace ran outside a physics step")
+		GSLog.warn(CHANNEL, "no space state; trace ran outside a physics step")
 		return miss
 
 	_query.from = from
@@ -77,13 +77,13 @@ func _world_ray(
 	if result.is_empty():
 		return miss
 
-	var hit := DotHitbox.Hit.new()
+	var hit := GSHitbox.Hit.new()
 	hit.point = result["position"]
 	hit.normal = result["normal"]
 	hit.distance = from.distance_to(hit.point)
 	hit.blocked = true
 	hit.collider = result.get("collider")
-	hit.group = DotHitGroup.GENERIC
+	hit.group = GSHitGroup.GENERIC
 	if material_shape_fn.is_valid():
 		hit.material = StringName(material_shape_fn.call(result.get("collider"), int(result.get("shape", -1))))
 	elif material_fn.is_valid():

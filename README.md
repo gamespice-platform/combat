@@ -2,7 +2,7 @@
 
 Health, damage and hit registration for a Godot 4.7+ shooter. It gives you hitboxes, scatter that is the same everywhere, lag compensation, and a resolver that turns a shot into damage under one set of rules. A client can predict its own fire while the server stays the authority. Part of the [GameSpice](https://github.com/gamespice-platform) family.
 
-It needs [GameSpice Core](https://github.com/gamespice-platform/core). It works with GameSpice Net, [GameSpice Weapon](https://github.com/gamespice-platform/weapon) and GameSpice Player Controller without importing any of them. It does not know what a weapon is: a `DotShot` describes itself (damage, range, splash), so a rifle, a bow, a thrown charge, a trap or a hazard all produce one the same way.
+It needs [GameSpice Core](https://github.com/gamespice-platform/core). It works with GameSpice Net, [GameSpice Weapon](https://github.com/gamespice-platform/weapon) and GameSpice Player Controller without importing any of them. It does not know what a weapon is: a `GSShot` describes itself (damage, range, splash), so a rifle, a bow, a thrown charge, a trap or a hazard all produce one the same way.
 
 ## Install
 
@@ -13,9 +13,9 @@ It needs [GameSpice Core](https://github.com/gamespice-platform/core). It works 
 
 ```gdscript
 # Once, on the server.
-var combat := DotCombatManager.new()
-combat.trace = DotTracePhysics.for_world(get_world_3d())
-combat.rules = DotDamageRules.strict()
+var combat := GSCombatManager.new()
+combat.trace = GSTracePhysics.for_world(get_world_3d())
+combat.rules = GSDamageRules.strict()
 add_child(combat)
 
 # Per shootable entity.
@@ -23,7 +23,7 @@ hitbox_set.register_with(combat, player_id)
 combat.register_health(player_id, health)
 
 # Per shot. Anything can build one; dot-weapon usually does.
-var shot := DotShot.make(&"rifle", player_id, tick, index)
+var shot := GSShot.make(&"rifle", player_id, tick, index)
 shot.origin = eye_position
 shot.direction = aim
 shot.damage = 25.0
@@ -40,23 +40,23 @@ Something else decides that a shot happened. dot-combat decides what it hit. `re
 
 | Class | What it does |
 | --- | --- |
-| `DotHealth` | Health, armour, regeneration and spawn protection, counted in ticks so it replays. |
-| `DotDamage` | One damage event, carrying its own scaling trace so a surprising number can be explained. |
-| `DotDamageType` | Falloff, armour share, self and friendly scales. A game adds its own. |
-| `DotHitGroup` | Named regions and their multipliers. A table, not an enum. |
-| `DotHitbox`, `DotHitboxSet` | Capsules, boxes and spheres tested analytically against a ray. |
-| `DotTrace` | Where a shot goes. `DotTracePhysics` for a real world, `DotTraceFlat` for a headless one. |
-| `DotShot` | One thing that was fired. |
-| `DotSpread` | Deterministic scatter, the reason prediction works. |
-| `DotDamageRules`, `DotDamageResolver` | Friendly fire, self damage, hit groups, criticals, falloff and clamping, in one order. |
-| `DotCombatManager` | Tracing, lag compensation, damage, kill reporting. |
-| `DotCombatNetSync` | What to replicate, without naming a GameSpice Net type. |
+| `GSHealth` | Health, armour, regeneration and spawn protection, counted in ticks so it replays. |
+| `GSDamage` | One damage event, carrying its own scaling trace so a surprising number can be explained. |
+| `GSDamageType` | Falloff, armour share, self and friendly scales. A game adds its own. |
+| `GSHitGroup` | Named regions and their multipliers. A table, not an enum. |
+| `GSHitbox`, `GSHitboxSet` | Capsules, boxes and spheres tested analytically against a ray. |
+| `GSTrace` | Where a shot goes. `GSTracePhysics` for a real world, `GSTraceFlat` for a headless one. |
+| `GSShot` | One thing that was fired. |
+| `GSSpread` | Deterministic scatter, the reason prediction works. |
+| `GSDamageRules`, `GSDamageResolver` | Friendly fire, self damage, hit groups, criticals, falloff and clamping, in one order. |
+| `GSCombatManager` | Tracing, lag compensation, damage, kill reporting. |
+| `GSCombatNetSync` | What to replicate, without naming a GameSpice Net type. |
 
 ## Three failures it is built around
 
 | Failure | How it is avoided |
 | --- | --- |
-| A shot that disagrees with itself. | Spread from a random stream differs on the predicting client, the server and every replay. `DotSpread` is a pure function of shooter, tick, shot and pellet, so all agree. |
+| A shot that disagrees with itself. | Spread from a random stream differs on the predicting client, the server and every replay. `GSSpread` is a pure function of shooter, tick, shot and pellet, so all agree. |
 | A shot through a wall. | World geometry and hitboxes are traced together, and a tie between a hitbox and a wall goes to the wall. |
 | A rewind that leaks. | Lag compensation moves hitboxes into the past. Every path out of `resolve_shot()`, including refusals, restores them. |
 
