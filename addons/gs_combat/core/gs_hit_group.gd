@@ -42,7 +42,7 @@ static func defaults() -> GSHitGroup:
 	return groups
 
 
-## Overrides multipliers from data, e.g. the `hit_groups:` map of `cfg/addons/dot-combat/*.yml`. Returns how many applied.
+## Overrides multipliers from data, e.g. the `hit_groups:` map of `cfg/addons/gs-combat/*.yml`. Returns how many applied.
 func apply_dict(data: Dictionary) -> int:
 	var applied := 0
 	for key in data:

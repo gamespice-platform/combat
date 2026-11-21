@@ -1,6 +1,6 @@
 # Design
 
-Why dot-combat is shaped the way it is, and why the obvious alternative is wrong in each place. The one-line rules are in [CLAUDE.md](../CLAUDE.md).
+Why gs-combat is shaped the way it is, and why the obvious alternative is wrong in each place. The one-line rules are in [CLAUDE.md](../CLAUDE.md).
 
 ## Two jobs, two places
 
@@ -77,11 +77,11 @@ Whether shots go through team-mates is a server's choice, not only a game author
 
 ## Wire form
 
-`GSCombatNetSync` replicates health, armour and alive, and health and armour as integers: an integer compares exactly, so a reconciling client does not see a correction every tick because the server's `73.4001` differs from its own `73.4`. It carries health alone; the slot, magazine and reserve are dot-weapon's `GSWeaponNetSync` (which keeps ammunition `owner_only`, since exact ammunition is information an opponent should not have). A game using both concatenates the two spec lists.
+`GSCombatNetSync` replicates health, armour and alive, and health and armour as integers: an integer compares exactly, so a reconciling client does not see a correction every tick because the server's `73.4001` differs from its own `73.4`. It carries health alone; the slot, magazine and reserve are gs-weapon's `GSWeaponNetSync` (which keeps ammunition `owner_only`, since exact ammunition is information an opponent should not have). A game using both concatenates the two spec lists.
 
 ## Coupling: nothing is imported
 
-dot-combat names no class outside dot-core: not dot-net, dot-weapon, dot-player-controller or dot-server. A script that *mentions* a missing `class_name` fails to parse and takes every script referencing it down with it (the same reason `GSWeaponCommand.write` / `read` in dot-weapon take `Variant`).
+gs-combat names no class outside gs-core: not gs-net, gs-weapon, gs-player-controller or gs-server. A script that *mentions* a missing `class_name` fails to parse and takes every script referencing it down with it (the same reason `GSWeaponCommand.write` / `read` in gs-weapon take `Variant`).
 
 - `GSCombatNetSync` describes what to replicate as data, with type names as strings (`"UINT"`, `"BOOL"`), which a bridge resolves with `GSNetVar.Type[spec.type]`. The ~30-line `GSNetBehaviour` that joins it to GameSpice Net belongs in the game; the worked example is in `GSCombatNetSync`'s class documentation.
 - Lag compensation is two `Callable`s.
@@ -98,7 +98,7 @@ dot-combat names no class outside dot-core: not dot-net, dot-weapon, dot-player-
 
 ## Limbs
 
-A game that cuts bodies apart (dismemberment, a crawling zombie) needs a shot resolved to a named part and a world point. `GSHitbox.limb` is that name; it is separate from `group` because a group is a damage multiplier and two hitboxes can share one while being different limbs. The trace copies it to `Hit.limb`, the manager to `GSDamage.limb`, and after damage is applied `GSCombatManager.limb_hit(entity, limb, point, amount, impulse)` fires when the resolved damage reaches `limb_min_damage[limb]` (else `default`, else 0). Thresholds are data: `limb_min_damage:` in `cfg/addons/dot-combat/*.yml`, read at setup.
+A game that cuts bodies apart (dismemberment, a crawling zombie) needs a shot resolved to a named part and a world point. `GSHitbox.limb` is that name; it is separate from `group` because a group is a damage multiplier and two hitboxes can share one while being different limbs. The trace copies it to `Hit.limb`, the manager to `GSDamage.limb`, and after damage is applied `GSCombatManager.limb_hit(entity, limb, point, amount, impulse)` fires when the resolved damage reaches `limb_min_damage[limb]` (else `default`, else 0). Thresholds are data: `limb_min_damage:` in `cfg/addons/gs-combat/*.yml`, read at setup.
 
 What a limb does is the host's. The signal is the neutral form; `limb_target_fn` is the shortcut: a callable from entity to any object with `hit(point, amount, impulse)`, so GameSpice NPC's `GSNpcLimbs` is driven without either addon naming the other. A host whose hitboxes are not tagged (its body has one capsule) can pass `damage.point` to `GSNpcLimbs.hit` itself; it resolves the region from the bones.
 

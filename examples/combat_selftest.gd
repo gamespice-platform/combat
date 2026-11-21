@@ -1,6 +1,6 @@
 extends "res://examples/selftest/prefilter_tests.gd"
 
-## Exercises everything in dot-combat, offline and headless.
+## Exercises everything in gs-combat, offline and headless.
 ##
 ## [codeblock]
 ## godot --headless --path . res://examples/combat_selftest.tscn
@@ -29,7 +29,7 @@ func _ready() -> void:
 
 
 func _run() -> void:
-	print("dot-combat self-test")
+	print("gs-combat self-test")
 	print("")
 
 	_test_damage_type()

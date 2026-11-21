@@ -165,7 +165,7 @@ func _test_damage_immunity() -> void:
 
 ## Every addon file that asks the physics space a question. A new one fails here until it is in
 ## [constant QUERY_FILES] and GameSpice Physics docs/threading.md, so the list of in-step callers cannot go stale.
-const QUERY_FILES: Array[String] = ["core/dot_sentry.gd", "trace/dot_trace_physics.gd"]
+const QUERY_FILES: Array[String] = ["core/gs_sentry.gd", "trace/gs_trace_physics.gd"]
 const QUERY_NEEDLES: Array[String] = ["direct_space_state", "space.intersect_", "space.cast_motion(", "space.get_rest_info("]
 const TICK_ENTRY_NEEDLES: Array[String] = ["func _process(", "func _input(", "func _unhandled_input(", "call_deferred(", "await "]
 
@@ -181,7 +181,7 @@ func _audit_scripts(dir: String, out: Array[String]) -> void:
 func _test_space_query_audit() -> void:
 	_section("space-query audit")
 	var scripts: Array[String] = []
-	_audit_scripts("res://addons/dot_combat", scripts)
+	_audit_scripts("res://addons/gs_combat", scripts)
 	var found: Array[String] = []
 	var in_tick_entry: Array[String] = []
 
@@ -193,7 +193,7 @@ func _test_space_query_audit() -> void:
 				queries = true
 		if not queries:
 			continue
-		var rel := path.trim_prefix("res://addons/dot_combat/")
+		var rel := path.trim_prefix("res://addons/gs_combat/")
 		found.append(rel)
 		for n in TICK_ENTRY_NEEDLES:
 			if text.contains(n):

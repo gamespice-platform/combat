@@ -6,7 +6,7 @@ It needs [GameSpice Core](https://github.com/gamespice-platform/core). It works 
 
 ## Install
 
-1. Copy `addons/dot_combat/` and `addons/dot_core/` into your project.
+1. Copy `addons/gs_combat/` and `addons/gs_core/` into your project.
 2. Enable both in *Project > Project Settings > Plugins*.
 
 ## Quick start
@@ -22,7 +22,7 @@ add_child(combat)
 hitbox_set.register_with(combat, player_id)
 combat.register_health(player_id, health)
 
-# Per shot. Anything can build one; dot-weapon usually does.
+# Per shot. Anything can build one; gs-weapon usually does.
 var shot := GSShot.make(&"rifle", player_id, tick, index)
 shot.origin = eye_position
 shot.direction = aim
@@ -34,7 +34,7 @@ if is_server:
     combat.resolve_shot(shot, client_view_tick)
 ```
 
-Something else decides that a shot happened. dot-combat decides what it hit. `resolve_shot()` runs only where the game is authoritative, because a client that resolved its own shots would decide who dies.
+Something else decides that a shot happened. gs-combat decides what it hit. `resolve_shot()` runs only where the game is authoritative, because a client that resolved its own shots would decide who dies.
 
 ## What is in it
 

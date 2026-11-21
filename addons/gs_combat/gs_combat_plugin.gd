@@ -7,28 +7,28 @@ extends EditorPlugin
 ## once, and a singleton combat manager makes that impossible. [GSCombatManager]
 ## registers itself in [GSRegistry] instead.
 
-const _ICON := "res://addons/dot_combat/icon_placeholder.svg"
+const _ICON := "res://addons/gs_combat/icon_placeholder.svg"
 
 const _TYPES := [
 	[
 		"GSCombatManager",
 		"Node",
-		"res://addons/dot_combat/dot_combat_manager.gd",
+		"res://addons/gs_combat/gs_combat_manager.gd",
 	],
 	[
 		"GSHealth",
 		"Node",
-		"res://addons/dot_combat/core/dot_health.gd",
+		"res://addons/gs_combat/core/gs_health.gd",
 	],
 	[
 		"GSHitbox",
 		"Node3D",
-		"res://addons/dot_combat/core/dot_hitbox.gd",
+		"res://addons/gs_combat/core/gs_hitbox.gd",
 	],
 	[
 		"GSHitboxSet",
 		"Node3D",
-		"res://addons/dot_combat/core/dot_hitbox_set.gd",
+		"res://addons/gs_combat/core/gs_hitbox_set.gd",
 	],
 ]
 

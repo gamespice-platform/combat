@@ -3,7 +3,7 @@ class_name GSCombatConfig
 extends GSConfig
 
 ## Everything configurable about combat. Layered like every [GSConfig]: exported
-## defaults, then a JSON file, then [code]DOT_COMBAT_*[/code] environment variables,
+## defaults, then a JSON file, then [code]GS_COMBAT_*[/code] environment variables,
 ## then [code]--combat-*[/code] arguments.
 
 @export_group("Simulation")
@@ -80,7 +80,7 @@ extends GSConfig
 
 
 func env_prefix() -> String:
-	return "DOT_COMBAT_"
+	return "GS_COMBAT_"
 
 
 func cli_prefix() -> String:

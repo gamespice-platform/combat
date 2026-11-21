@@ -68,7 +68,7 @@ func setup() -> GSResult:
 
 	var valid := config.validate()
 
-	var cfg_limbs := GSAddonConfig.load_dir("dot-combat")
+	var cfg_limbs := GSAddonConfig.load_dir("gs-combat")
 	if cfg_limbs.ok and limb_min_damage.is_empty():
 		var v: Variant = GSAddonConfig.get_value(cfg_limbs.value, "limb_min_damage", {})
 		if v is Dictionary:

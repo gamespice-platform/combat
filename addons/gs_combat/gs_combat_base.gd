@@ -5,7 +5,7 @@ extends Node
 ## State and entity registry under [GSCombatManager]: exports, signals, hitbox and health registration, damage types.
 
 const CHANNEL := "combat"
-const SERVICE := &"dot_combat"
+const SERVICE := &"gs_combat"
 
 ## Damage was resolved and applied. Fires once per victim per shot, after
 ## [GSHealth] has finished with it, so the outcome fields are populated.
@@ -36,7 +36,7 @@ signal limb_hit(entity: Node, limb: StringName, point: Vector3, amount: float, i
 ## A client still traces (hit markers, effects) but never touches a [GSHealth].
 @export var is_authority: bool = true
 
-## Registers under [code]dot_combat[/code], or under a scoped name when set. Two
+## Registers under [code]gs_combat[/code], or under a scoped name when set. Two
 ## managers in one process — a server and a client — need different scopes.
 @export var service_scope: StringName = &""
 
@@ -62,7 +62,7 @@ signal limb_hit(entity: Node, limb: StringName, point: Vector3, amount: float, i
 var trace: GSTrace = null
 
 ## Minimum resolved damage for a hit on a limb to count, by limb name; `default` covers the rest.
-## Loaded from `limb_min_damage:` in `cfg/addons/dot-combat/*.yml` by [method setup]; assign to override.
+## Loaded from `limb_min_damage:` in `cfg/addons/gs-combat/*.yml` by [method setup]; assign to override.
 var limb_min_damage: Dictionary = {}
 
 ## Optional `func(entity: Node) -> Object`. When it returns an object with `hit(point, amount, impulse)`
