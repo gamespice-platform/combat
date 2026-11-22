@@ -157,6 +157,27 @@ func _world_ray(
 	return best
 
 
+## [method GSTrace.line_of_sight] without building a hit: the native walk only says whether a box or
+## the floor stands in the way, which is all sight needs (bots ask it many times a tick). Same answer
+## as the base class to the bit; the script walk is the fallback.
+func line_of_sight(from: Vector3, to: Vector3) -> bool:
+	if not is_native():
+		return super.line_of_sight(from, to)
+	var offset := to - from
+	var distance := offset.length()
+	if distance <= 0.0001:
+		return true
+	var direction := offset / distance
+	if floor_y > -INF and direction.y < -0.000001:
+		var t := (floor_y - from.y) / direction.y
+		if t >= 0.0 and t <= distance:
+			return false
+	if _bvh_stale:
+		prepare()
+	var i: int = _bvh.nearest(from, direction, distance) if _bvh != null else _walker.nearest(_corners, from, direction, distance)
+	return i < 0
+
+
 ## Every ray's world hit in one native call (struct-of-arrays): ray [code]k[/code] runs from
 ## [code]froms[k][/code] along [code]directions[k][/code] for at most [code]max_distances[k][/code].
 ## Returns [code]{kind: PackedByteArray (0 miss, 1 ground, 2 box), index: PackedInt32Array (the

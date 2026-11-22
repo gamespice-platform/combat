@@ -14,7 +14,7 @@ extends "res://examples/selftest/prefilter_tests.gd"
 ## re-ran it, a rewind that is never restored, and a client-reported muzzle that is
 ## taken at its word.
 
-const CHECKS := 378
+const CHECKS := 379
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
@@ -555,6 +555,8 @@ func _test_flat_trace_native() -> void:
 	var cases := 0
 	var first_miss := ""
 	var batched := 0
+	var los_cases := 0
+	var los_same := 0
 	var batched_same := 0
 	var batch_miss := ""
 	for world in 40:
@@ -584,6 +586,11 @@ func _test_flat_trace_native() -> void:
 			var reach := rng.randf_range(0.5, 80.0)
 			var a := gd.ray(from, dir, reach)
 			var b := nat.ray(from, dir, reach)
+			var los_to := from + dir * reach
+			los_cases += 1
+			var los_nat := nat.line_of_sight(from, los_to)
+			if gd.line_of_sight(from, los_to) == los_nat and los_nat == not b.ok():
+				los_same += 1
 			batch_from.append(from)
 			batch_dir.append(dir)
 			batch_reach.append(reach)
@@ -605,6 +612,7 @@ func _test_flat_trace_native() -> void:
 				batch_miss = "world %d ray %d: script %s %s, batch %s %s" % [world, r, singles[r].point, singles[r].distance, many[r].point, many[r].distance]
 	_check(same == cases and hits > cases / 5, "%d random rays (%d hits): the %s walk matches the script to the bit" % [cases, hits, "native" if loaded else "script (no library)"], first_miss)
 	_check(batched == cases and batched_same == batched, "%d rays in one world_rays call per world match the script's one-at-a-time hits to the bit" % batched, batch_miss)
+	_check(los_cases > 0 and los_same == los_cases, "%d line_of_sight queries: the native answer matches the script and the ray's miss" % los_cases)
 	var t := GSTraceFlat.new().add_box(AABB(Vector3.ZERO, Vector3.ONE))
 	_check(t.is_native() == loaded, "the native walk is on exactly when the library is loaded")
 	t.boxes.append(AABB(Vector3(4.0, 0.0, 0.0), Vector3.ONE))
