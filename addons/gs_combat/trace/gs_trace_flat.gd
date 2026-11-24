@@ -39,6 +39,11 @@ static var _walker: Object = ClassDB.instantiate(&"GSSimFlatTrace") if ClassDB.c
 var _bvh: Object = null
 var _bvh_stale := true
 
+## Held while the hierarchy is built, so worker threads that meet a stale one at the same moment
+## build it once, one at a time (two builds racing on one native object, or a second instance
+## replacing the first mid-build and freeing it, crashes the process).
+var _bvh_lock := Mutex.new()
+
 
 static func with_floor(y: float = 0.0) -> GSTraceFlat:
 	# Not this class's own name. A script that names itself in an expression, loaded after
@@ -105,11 +110,14 @@ func repack() -> void:
 func prepare() -> void:
 	if not is_native() or not _bvh_stale:
 		return
-	if _bvh == null and ClassDB.class_exists(&"GSSimFlatBvh"):
-		_bvh = ClassDB.instantiate(&"GSSimFlatBvh")
-	if _bvh != null:
-		_bvh.build(_corners)
-	_bvh_stale = false
+	_bvh_lock.lock()
+	if _bvh_stale:
+		if _bvh == null and ClassDB.class_exists(&"GSSimFlatBvh"):
+			_bvh = ClassDB.instantiate(&"GSSimFlatBvh")
+		if _bvh != null:
+			_bvh.build(_corners)
+		_bvh_stale = false
+	_bvh_lock.unlock()
 
 
 ## Whether rays walk the boxes natively now.

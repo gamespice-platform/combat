@@ -209,3 +209,28 @@ func _prefilter_pass_through(manager: GSCombatManager, rules: GSDamageRules, rng
 			fn_diff += 1
 	manager.pass_through_fn = Callable()
 	_check(fn_diff == 0, "and with a pass_through_fn in place of the team rule", "%d differ" % fn_diff)
+
+
+## Worker threads meeting a stale hierarchy together (bot sight jobs on a fresh level) must build it once.
+func _test_flat_trace_threads() -> void:
+	_section("flat trace: threads that meet an unbuilt hierarchy")
+	var bad := 0
+	for _round in 20:
+		var trace := GSTraceFlat.with_floor(0.0)
+		for b in 60:
+			trace.add_box(AABB(Vector3(b * 3.0, 0.0, 0.0), Vector3(1.0, 2.0, 1.0)))
+		var tasks: Array[int] = []
+		var seen: Array[int] = []
+		seen.resize(8)
+		for k in 8:
+			tasks.append(WorkerThreadPool.add_task(func() -> void:
+				# Same answer on every thread: the first box is hidden behind its neighbour.
+				seen[k] = 1 if trace.line_of_sight(Vector3(-5.0, 1.0, 0.5), Vector3(100.0, 1.0, 0.5)) else 0
+			))
+		for id in tasks:
+			WorkerThreadPool.wait_for_task_completion(id)
+		for v in seen:
+			if v != 0:
+				bad += 1
+	_check(bad == 0, "20 levels, 8 threads each calling line_of_sight on an unbuilt trace: no crash, every answer blocked")
+	_done()
