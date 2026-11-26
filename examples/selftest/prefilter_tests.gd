@@ -142,6 +142,7 @@ func _test_trace_prefilter() -> void:
 	var sets: Array[GSHitboxSet] = manager._set_list
 	var trials := 600
 	var ray_diff := 0
+	var held_diff := 0
 	var ray_hits := 0
 	var ray_walls := 0
 
@@ -161,6 +162,12 @@ func _test_trace_prefilter() -> void:
 
 		if _hit_key(got) != _hit_key(want):
 			ray_diff += 1
+		# The same ray with the bounds read once (sv_combat_bounds_cache): disabled sets, freed boxes and all.
+		manager.trace.hold_bounds(sets)
+		var held := manager.trace.ray(from, direction, reach, sets)
+		manager.trace.release_bounds()
+		if _hit_key(held) != _hit_key(want):
+			held_diff += 1
 		if want.ok():
 			ray_hits += 1
 			if want.blocked:
@@ -168,6 +175,7 @@ func _test_trace_prefilter() -> void:
 
 	manager.trace.exclude = []
 	_check(ray_diff == 0, "%d random rays return exactly what the unfiltered walk returned" % trials, "%d differ" % ray_diff)
+	_check(held_diff == 0, "and the same %d with held bounds (hold_bounds)" % trials, "%d differ" % held_diff)
 	_check(ray_hits > 100 and ray_walls > 20 and ray_hits - ray_walls > 30, "and the rays cover bodies and walls", "%d hits, %d walls" % [ray_hits, ray_walls])
 
 	_prefilter_pass_through(manager, rules, rng, trials)

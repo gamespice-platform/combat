@@ -100,6 +100,9 @@ var penetration_players: bool = true
 ## Whether shallow hits on hard materials bounce (`sv_ricochet`); needs a round whose [GSPenetration] lists ricochet materials.
 var ricochet_enabled: bool = false
 
+## Whether a shot reads every hitbox set's bounds centre once (`sv_combat_bounds_cache`) instead of once a ray; the same hits either way, it only saves the transforms.
+var bounds_cache: bool = true
+
 ## Metres a round is taken to cross a one-sided sheet (no far face to find), per material. A material not listed stops the round.
 var sheet_thickness: Dictionary = {&"glass": 0.01, &"wood": 0.05, &"plastic": 0.02, &"cloth": 0.01, &"foliage": 0.02, &"metal": 0.015, &"fence": 0.02}
 

@@ -32,6 +32,15 @@ const _CVARS_PATH := "res://addons/gs_combat/gs_combat_cvars.gd"
 var _tracer: RefCounted = null
 var _cvars: RefCounted = null
 
+## Microseconds per part of [method resolve_shot], summed while [member phase_timers] is on (a profiler's switch;
+## off, each part costs one branch). [member GSTrace.phase_us] splits [code]pellets[/code] further.
+const PHASES: Array[StringName] = [
+	&"validate", &"origin", &"rewind", &"exclude", &"pellets", &"splash", &"restore", &"damages", &"emit",
+]
+static var phase_us := PackedInt64Array([0, 0, 0, 0, 0, 0, 0, 0, 0])
+## Read by a profiler, never by the game: timings on, [member phase_us] grows.
+static var phase_timers := false
+
 
 func _init() -> void:
 	_tracer = load(_TRACER_PATH).new(self)
@@ -132,7 +141,9 @@ func resolve_shot(shot: GSShot, view_tick: float = -1.0) -> GSShot:
 	if shot == null:
 		return shot
 
+	var lap := Time.get_ticks_usec() if phase_timers else 0
 	var refusal := _validate_shot(shot)
+	lap = _lap(0, lap)
 
 	if refusal != "":
 		_shots_refused += 1
@@ -140,19 +151,24 @@ func resolve_shot(shot: GSShot, view_tick: float = -1.0) -> GSShot:
 		return shot
 
 	_correct_origin(shot)
+	lap = _lap(1, lap)
 
 	var rewound := _begin_rewind(shot, view_tick)
+	lap = _lap(2, lap)
 
 	# Nothing between here and _end_rewind may return early.
-	_trace_shot(shot)
+	lap = _trace_shot(shot, lap)
 
 	if shot.splash_radius > 0.0:
 		_apply_splash(shot)
+	lap = _lap(5, lap)
 
 	_end_rewind(rewound)
+	lap = _lap(6, lap)
 
 	if is_authority:
 		_apply_damages(shot)
+	lap = _lap(7, lap)
 
 	_shots_resolved += 1
 
@@ -161,7 +177,17 @@ func resolve_shot(shot: GSShot, view_tick: float = -1.0) -> GSShot:
 			GSLog.debug(CHANNEL, "damage", damage.describe())
 
 	shot_resolved.emit(shot)
+	_lap(8, lap)
 	return shot
+
+
+## Adds the time since [param since] to [member phase_us][[param phase]] and returns now; 0 while [member phase_timers] is off.
+static func _lap(phase: int, since: int) -> int:
+	if not phase_timers:
+		return 0
+	var now := Time.get_ticks_usec()
+	phase_us[phase] += now - since
+	return now
 
 
 func _validate_shot(shot: GSShot) -> String:
@@ -224,7 +250,8 @@ func _end_rewind(rewound: bool) -> void:
 		restore_fn.call()
 
 
-func _trace_shot(shot: GSShot) -> void:
+## Returns the phase clock after the pellets (see [method _lap]).
+func _trace_shot(shot: GSShot, lap: int = 0) -> int:
 	var type := shot.damage_type if shot.damage_type != null else damage_type(&"")
 
 	var shooter := hitboxes_of(shot.attacker)
@@ -232,6 +259,7 @@ func _trace_shot(shot: GSShot) -> void:
 	# Inside the rewind, so "holds the muzzle" uses the positions the rays test against.
 	excluded.append_array(pass_through_sets(shot))
 	trace.exclude = excluded
+	lap = _lap(3, lap)
 
 	shot.impacts.clear()
 	shot.penetrations.clear()
@@ -241,7 +269,7 @@ func _trace_shot(shot: GSShot) -> void:
 		# Deferred: an entity with a lifetime, not resolved here; only the endpoint is recorded.
 		for direction in shot.pellets:
 			shot.impacts.append(shot.origin + direction * shot.max_range)
-		return
+		return _lap(4, lap)
 
 	var pen: GSPenetration = null
 	if penetration_enabled and shot.penetration != null and shot.penetration.enabled():
@@ -249,10 +277,15 @@ func _trace_shot(shot: GSShot) -> void:
 		if not pen.enabled():
 			pen = null
 
+	# Nothing moves a set between here and the restore: every ray of every pellet can share one read of the bounds.
+	if bounds_cache:
+		trace.hold_bounds(_set_list)
 	for pellet in range(shot.pellets.size()):
 		_trace_pellet(shot, pellet, type, pen, excluded)
+	trace.release_bounds()
 
 	trace.exclude = excluded
+	return _lap(4, lap)
 
 
 ## One pellet: walls and (under [member penetration_players]) bodies it passes spend [param pen]'s power, damage falls with what is left.
@@ -354,6 +387,9 @@ const CVAR_PENETRATION := "sv_penetration"
 const CVAR_PENETRATION_SCALE := "sv_penetration_scale"
 const CVAR_PENETRATION_PLAYERS := "sv_penetration_players"
 const CVAR_RICOCHET := "sv_ricochet"
+
+## 1 reads each hitbox set's bounds centre once a shot ([method GSTrace.hold_bounds]), 0 once a ray; the hits are the same, it is the A/B switch.
+const CVAR_BOUNDS_CACHE := "sv_combat_bounds_cache"
 
 
 ## The cvars [method bind_cvars] registers, as data, for a host that registers them its own way.

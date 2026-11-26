@@ -15,5 +15,8 @@ extends RefCounted
 # 4: GSCombatManager.follow_cvars() (a client keeps the server's replicated cvars).
 # 5: GSSentry (a deployable auto-turret: target choice, ammo, lifetime, placement check).
 # 6: GSHitGroup.bind_cvars (the head, neck, stomach and leg multipliers as server cvars).
-const LEVEL := 6
+# 7: GSCombatManager.phase_timers, phase_us, PHASES and GSTrace.phase_timers, phase_us, PHASES: opt-in
+#    sub-phase timings of resolve_shot and GSTrace.ray for a profiler.
+#    GSTrace.hold_bounds/release_bounds, GSCombatManager.bounds_cache and its cvar sv_combat_bounds_cache.
+const LEVEL := 7
 const OLDEST := 1

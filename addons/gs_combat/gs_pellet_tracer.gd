@@ -20,6 +20,9 @@ var _walked: float = 0.0
 var _bounces: int = 0
 var _skip: Array = []
 var _skip_rids: Array[RID] = []
+# Whether _skip / _skip_rids are this pellet's own copies yet: most pellets add nothing, so they share the caller's until the first add.
+var _skip_own := false
+var _skip_rids_own := false
 
 
 func _init(manager: GSCombatManager) -> void:
@@ -47,8 +50,10 @@ func _begin(shot: GSShot, pellet: int, type: GSDamageType, pen: GSPenetration, e
 	_walls = 0
 	_walked = 0.0
 	_bounces = 0
-	_skip = excluded.duplicate()
-	_skip_rids = base_rids.duplicate()
+	_skip = excluded
+	_skip_rids = base_rids
+	_skip_own = false
+	_skip_rids_own = false
 
 
 func _walk() -> void:
@@ -65,6 +70,14 @@ func _walk() -> void:
 		var again := _step_world(hit, can_pass) if (hit.blocked or hit.entity == null) else _step_body(hit, can_pass)
 		if not again:
 			return
+
+
+
+# Copies the caller's exclusion list before this pellet's first add, so the next pellet starts from the caller's again.
+func _own_skip() -> void:
+	if not _skip_own:
+		_skip = _skip.duplicate()
+		_skip_own = true
 
 
 ## Moves on past a face; false (impact recorded) when the range is spent.
@@ -85,8 +98,12 @@ func _step_world(hit: GSHitbox.Hit, can_pass: bool) -> bool:
 	if pane != null and pane.has_method(&"hurt") and pane.has_method(&"is_broken"):
 		pane.call(&"hurt", _shot.damage * m.config.damage_scale, hit.point, &"bullet")
 		if bool(pane.call(&"is_broken")):
+			_own_skip()
 			_skip.append(pane)
 			if pane is CollisionObject3D:
+				if not _skip_rids_own:
+					_skip_rids = _skip_rids.duplicate()
+					_skip_rids_own = true
 				_skip_rids.append((pane as CollisionObject3D).get_rid())
 			return _advance(hit.point + _direction * 0.01, hit.distance)
 
@@ -187,6 +204,7 @@ func _step_body(hit: GSHitbox.Hit, can_pass: bool) -> bool:
 	if body_set == null:
 		_shot.impacts.append(hit.point)
 		return false
+	_own_skip()
 	_skip.append(body_set)
 	_passes += 1
 	return _advance(hit.point + _direction * 0.01, hit.distance)

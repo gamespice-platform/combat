@@ -61,13 +61,20 @@ func specs() -> Array[Dictionary]:
 			"min": 0.0,
 			"max": 1.0,
 		},
+		{
+			"name": GSCombatManager.CVAR_BOUNDS_CACHE,
+			"value": "1" if m.bounds_cache else "0",
+			"description": "1 a shot reads each hitbox set's bounds once, 0 once a ray (same hits; a profiling switch)",
+			"min": 0.0,
+			"max": 1.0,
+		},
 	]
 	return out
 
 
 ## Applies one cvar by name. False for a name that is not the manager's or a value that is not a number.
 func apply(cvar_name: String, value: String) -> bool:
-	if cvar_name in [GSCombatManager.CVAR_PENETRATION, GSCombatManager.CVAR_PENETRATION_SCALE, GSCombatManager.CVAR_PENETRATION_PLAYERS, GSCombatManager.CVAR_RICOCHET]:
+	if cvar_name in [GSCombatManager.CVAR_PENETRATION, GSCombatManager.CVAR_PENETRATION_SCALE, GSCombatManager.CVAR_PENETRATION_PLAYERS, GSCombatManager.CVAR_RICOCHET, GSCombatManager.CVAR_BOUNDS_CACHE]:
 		return _apply_penetration(cvar_name, value)
 	if cvar_name != GSCombatManager.CVAR_TEAMMATE_PASSTHROUGH and cvar_name != GSCombatManager.CVAR_FRIENDLY_FIRE and cvar_name != GSCombatManager.CVAR_HITZONES:
 		return false
@@ -121,6 +128,8 @@ func _apply_penetration(cvar_name: String, value: String) -> bool:
 		m.penetration_players = number != 0.0
 	elif cvar_name == GSCombatManager.CVAR_RICOCHET:
 		m.ricochet_enabled = number != 0.0
+	elif cvar_name == GSCombatManager.CVAR_BOUNDS_CACHE:
+		m.bounds_cache = number != 0.0
 	else:
 		m.penetration_scale = maxf(0.0, number)
 	return true
