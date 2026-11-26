@@ -24,18 +24,18 @@ extends GSCombatBase
 ## manager.resolve_shot(shot, client_view_tick)
 ## [/codeblock]
 
-# Loaded by uid, not named: the tracer and the cvars name this class back, and a script loop
+# Loaded by path, not named: the tracer and the cvars name this class back, and a script loop
 # keeps every script in it in memory for good (Godot 4.7).
-const _TRACER_UID := "uid://cbebxr4alar6d"
-const _CVARS_UID := "uid://dk1khpgu3sovl"
+const _TRACER_PATH := "res://addons/gs_combat/gs_pellet_tracer.gd"
+const _CVARS_PATH := "res://addons/gs_combat/gs_combat_cvars.gd"
 
 var _tracer: RefCounted = null
 var _cvars: RefCounted = null
 
 
 func _init() -> void:
-	_tracer = load(_TRACER_UID).new(self)
-	_cvars = load(_CVARS_UID).new(self)
+	_tracer = load(_TRACER_PATH).new(self)
+	_cvars = load(_CVARS_PATH).new(self)
 
 
 func _ready() -> void:
