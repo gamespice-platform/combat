@@ -15,5 +15,7 @@ extends RefCounted
 # 4: GSCombatManager.follow_cvars() (a client keeps the server's replicated cvars).
 # 5: GSSentry (a deployable auto-turret: target choice, ammo, lifetime, placement check).
 # 6: GSHitGroup.bind_cvars (the head, neck, stomach and leg multipliers as server cvars).
-const LEVEL := 6
+# 7: GSHitboxSet.native, is_native() and GSCombatManager.CVAR_HITBOX_NATIVE (sv_hitbox_native);
+#    GSTrace.native_sets, sets_are_native() and GSCombatManager.CVAR_TRACE_NATIVE (sv_trace_native).
+const LEVEL := 7
 const OLDEST := 1

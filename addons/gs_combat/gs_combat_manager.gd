@@ -359,6 +359,11 @@ const CVAR_RICOCHET := "sv_ricochet"
 ## bit) when the library is loaded, 0 always the script loop. Process-wide: [member GSHitboxSet.native].
 const CVAR_HITBOX_NATIVE := "sv_hitbox_native"
 
+## 1 a trace walks every hitbox set of a ray in one native call (GameSpice Sim's
+## GSSimHitboxRay.nearest_in_sets, same hit to the bit) when the library has it, 0 always the
+## script walk. Process-wide: [member GSTrace.native_sets].
+const CVAR_TRACE_NATIVE := "sv_trace_native"
+
 
 ## The cvars [method bind_cvars] registers, as data, for a host that registers them its own way.
 func cvar_specs() -> Array[Dictionary]:

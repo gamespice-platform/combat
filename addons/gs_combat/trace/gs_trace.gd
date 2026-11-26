@@ -21,6 +21,17 @@ const WALL_RECHECK_MIN := 0.02
 
 var collision_mask: int = 1
 
+## Walk the hitbox sets of [method ray] natively when GameSpice Sim's [code]GSSimHitboxRay[/code]
+## has [code]nearest_in_sets[/code]: one call per ray tests every set's bounds, exclusion and
+## hitboxes by the script's rules and names the hitbox, which the script then builds the hit from,
+## so hits are the same to the bit. Off forces the script walk (also the web build's path). Every
+## trace in the process; the server cvar [code]sv_trace_native[/code].
+static var native_sets := true
+
+## The stateless native walker, shared by every trace and thread; null without the library, or
+## with one too old to walk sets.
+static var _set_walker: Object = _make_set_walker()
+
 ## Nodes whose hitboxes are never tested. The shooter, usually.
 var exclude: Array = []
 
@@ -82,44 +93,49 @@ func ray(
 	var limit := world.distance if world.ok() else max_distance
 	var best := world
 
-	for set_node in sets:
-		if set_node == null or not is_instance_valid(set_node):
-			continue
-
-		# The bounds first: a few hundred bodies a shot, nearly all of them nowhere near the line.
-		# The sphere test of GSHitboxSet._ray_hits_bounds inline, same arithmetic: a call per set is most of the cost of a miss.
-		var offset := from - set_node.global_transform * set_node.bounds_offset
-		var along := offset.dot(direction)
-		var gap := offset.length_squared() - set_node.bounds_radius * set_node.bounds_radius
-		if gap > 0.0:
-			if along > 0.0:
-				continue
-			var depth := along * along - gap
-			if depth < 0.0 or -along - sqrt(depth) > limit:
+	if native_sets and _set_walker != null:
+		var pick: Vector2i = _set_walker.nearest_in_sets(sets, exclude, from, direction, max_distance, world.distance if world.ok() else -1.0)
+		if pick.x >= 0:
+			best = sets[pick.x].hitboxes()[pick.y].intersect_ray(from, direction, max_distance)
+	else:
+		for set_node in sets:
+			if set_node == null or not is_instance_valid(set_node):
 				continue
 
-		if not set_node.may_be_hit(from, direction, limit):
-			continue
+			# The bounds first: a few hundred bodies a shot, nearly all of them nowhere near the line.
+			# The sphere test of GSHitboxSet._ray_hits_bounds inline, same arithmetic: a call per set is most of the cost of a miss.
+			var offset := from - set_node.global_transform * set_node.bounds_offset
+			var along := offset.dot(direction)
+			var gap := offset.length_squared() - set_node.bounds_radius * set_node.bounds_radius
+			if gap > 0.0:
+				if along > 0.0:
+					continue
+				var depth := along * along - gap
+				if depth < 0.0 or -along - sqrt(depth) > limit:
+					continue
 
-		if _is_excluded(set_node):
-			continue
+			if not set_node.may_be_hit(from, direction, limit):
+				continue
 
-		var hit := set_node.intersect_ray(from, direction, limit)
+			if _is_excluded(set_node):
+				continue
 
-		if not hit.ok():
-			continue
+			var hit := set_node.intersect_ray(from, direction, limit)
 
-		if hit.distance > limit:
-			continue
+			if not hit.ok():
+				continue
 
-		# Strictly nearer, so a hitbox exactly level with a wall surface loses to the
-		# wall. A player standing flush against cover is the common case and giving
-		# the tie to the hitbox is how they get shot through it.
-		if best.ok() and hit.distance >= best.distance:
-			continue
+			if hit.distance > limit:
+				continue
 
-		best = hit
-		limit = hit.distance
+			# Strictly nearer, so a hitbox exactly level with a wall surface loses to the
+			# wall. A player standing flush against cover is the common case and giving
+			# the tie to the hitbox is how they get shot through it.
+			if best.ok() and hit.distance >= best.distance:
+				continue
+
+			best = hit
+			limit = hit.distance
 
 	# The reverse ray: a physics ray that starts inside a wall finds nothing there, so a shooter
 	# pressed into geometry would reach the far side. From the hit back to the muzzle it enters
@@ -194,6 +210,18 @@ func sphere_overlap(
 		distances.insert(index, distance)
 
 	return found
+
+
+## Whether [method ray] walks hitbox sets natively now.
+static func sets_are_native() -> bool:
+	return native_sets and _set_walker != null
+
+
+static func _make_set_walker() -> Object:
+	if not ClassDB.class_exists(&"GSSimHitboxRay"):
+		return null
+	var walker: Object = ClassDB.instantiate(&"GSSimHitboxRay")
+	return walker if walker.has_method(&"nearest_in_sets") else null
 
 
 func _is_excluded(set_node: GSHitboxSet) -> bool:
