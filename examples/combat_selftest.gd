@@ -1,4 +1,4 @@
-extends "res://examples/selftest/prefilter_tests.gd"
+extends "res://examples/selftest/hitbox_native_tests.gd"
 
 ## Exercises everything in gs-combat, offline and headless.
 ##
@@ -14,13 +14,13 @@ extends "res://examples/selftest/prefilter_tests.gd"
 ## re-ran it, a rewind that is never restored, and a client-reported muzzle that is
 ## taken at its word.
 
-const CHECKS := 380
+const CHECKS := 384
 
 ## Sections entered against sections that ran to their last line, and against this. A
 ## runtime error inside a section aborts that function and nothing says so; a section that
 ## bailed out early after a failed guard is counted as not finished on purpose. The CHECKS
 ## total is the other half — see docs/testing.md.
-const SECTIONS := 36
+const SECTIONS := 37
 
 
 func _ready() -> void:
@@ -68,6 +68,7 @@ func _run() -> void:
 	_test_damage_immunity()
 	_test_space_query_audit()
 	_test_trace_prefilter()
+	_test_hitbox_native()
 
 	print("")
 	print("%d passed, %d failed" % [_passed, _failed])

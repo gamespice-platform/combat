@@ -32,6 +32,14 @@ const CHANNEL := "combat.hitboxes"
 ## Vertical offset of that sphere's centre from this node, in local space.
 @export var bounds_offset: Vector3 = Vector3(0.0, 0.9, 0.0)
 
+## Pick the hitbox a ray meets natively when GameSpice Sim's [code]GSSimHitboxRay[/code] is loaded (the
+## same hit to the bit: the script then builds it from that one hitbox). Off forces the script loop,
+## which is also the web build's path. Every set in the process; the server cvar [code]sv_hitbox_native[/code].
+static var native := true
+
+## The stateless native picker, shared by every set and thread; null without the library.
+static var _picker: Object = ClassDB.instantiate(&"GSSimHitboxRay") if ClassDB.class_exists(&"GSSimHitboxRay") else null
+
 var _hitboxes: Array[GSHitbox] = []
 var _owner: Node = null
 var _manager: Node = null
@@ -70,6 +78,11 @@ func _collect(node: Node) -> void:
 		if child is GSHitboxSet:
 			continue
 		_collect(child)
+
+
+## Whether rays pick their hitbox natively now.
+static func is_native() -> bool:
+	return native and _picker != null
 
 
 func hitboxes() -> Array[GSHitbox]:
@@ -136,6 +149,10 @@ func intersect_ray(
 
 	if not _ray_hits_bounds(from, direction, max_distance):
 		return miss
+
+	if native and _picker != null:
+		var i: int = _picker.nearest(_hitboxes, from, direction, max_distance)
+		return miss if i < 0 else _hitboxes[i].intersect_ray(from, direction, max_distance)
 
 	var best: GSHitbox.Hit = miss
 

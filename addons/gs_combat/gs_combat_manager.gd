@@ -355,6 +355,10 @@ const CVAR_PENETRATION_SCALE := "sv_penetration_scale"
 const CVAR_PENETRATION_PLAYERS := "sv_penetration_players"
 const CVAR_RICOCHET := "sv_ricochet"
 
+## 1 hitbox sets pick the hitbox a ray meets natively (GameSpice Sim's GSSimHitboxRay, same hit to the
+## bit) when the library is loaded, 0 always the script loop. Process-wide: [member GSHitboxSet.native].
+const CVAR_HITBOX_NATIVE := "sv_hitbox_native"
+
 
 ## The cvars [method bind_cvars] registers, as data, for a host that registers them its own way.
 func cvar_specs() -> Array[Dictionary]:
