@@ -3,7 +3,6 @@
 addons/gs_combat/core/gs_damage.gd::<members>::untyped_array	1
 addons/gs_combat/core/gs_damage.gd::describe::untyped_array	1
 addons/gs_combat/core/gs_damage.gd::scale_by::alloc	1
-addons/gs_combat/core/gs_damage.gd::scale_by::dynamic_call	1
 addons/gs_combat/core/gs_damage.gd::scale_by::string_build	1
 addons/gs_combat/core/gs_damage.gd::scale_by::untyped_array	1
 addons/gs_combat/core/gs_damage_type.gd::describe::untyped_array	1
@@ -38,7 +37,6 @@ addons/gs_combat/core/gs_shot.gd::describe::untyped_array	1
 addons/gs_combat/core/gs_shot.gd::killed::alloc	1
 addons/gs_combat/core/gs_stomp.gd::<members>::untyped_array	1
 addons/gs_combat/core/gs_stomp.gd::find::alloc	1
-addons/gs_combat/core/gs_stomp.gd::find::dynamic_call	1
 addons/gs_combat/core/gs_stomp.gd::find::untyped_array	1
 addons/gs_combat/core/gs_stomp_rules.gd::bind_cvars::untyped_array	2
 addons/gs_combat/core/gs_stomp_rules.gd::cvar_specs::untyped_array	1
