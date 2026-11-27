@@ -18,7 +18,10 @@ extends RefCounted
 # 7: GSCombatManager.phase_timers, phase_us, PHASES and GSTrace.phase_timers, phase_us, PHASES: opt-in
 #    sub-phase timings of resolve_shot and GSTrace.ray for a profiler.
 #    GSTrace.hold_bounds/release_bounds, GSCombatManager.bounds_cache and its cvar sv_combat_bounds_cache.
-# 8: GSCombatManager.set_tracer()/get_tracer(): a game swaps the pellet walker (a native twin)
+# 8, 9: reserved for nightly/combat-rewind-rust (GSHitboxSet.native and sv_hitbox_native /
+#    sv_trace_native; GSTrace.set_walker). That branch numbered them 7 and 8 before main took 7,
+#    so it lands as 8 and 9; nothing else may take them.
+# 10: GSCombatManager.set_tracer()/get_tracer(): a game swaps the pellet walker (a native twin)
 #    without touching the private field.
-const LEVEL := 8
+const LEVEL := 10
 const OLDEST := 1
