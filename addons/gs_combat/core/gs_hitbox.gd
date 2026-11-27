@@ -347,24 +347,22 @@ func _ray_capsule(from: Vector3, direction: Vector3) -> float:
 
 		if discriminant >= 0.0:
 			var root := sqrt(discriminant)
-			# Typed so the loop variable is a float and not a Variant: assigning a
-			# Variant to `best` is an unsafe assignment, which these projects'
-			# warning settings promote to an error.
-			var roots: Array[float] = [(-b - root) / a, (-b + root) / a]
-			for t in roots:
-				if t < 0.0:
-					continue
-				var y := from.y + direction.y * t
-				if y >= -half and y <= half:
-					best = t if best < 0.0 else minf(best, t)
-					break
+			# The nearer root first, then the farther one; no array, as this runs per hitbox per trace.
+			var t := (-b - root) / a
+			var y := from.y + direction.y * t
+			if not (t >= 0.0 and y >= -half and y <= half):
+				t = (-b + root) / a
+				y = from.y + direction.y * t
+			if t >= 0.0 and y >= -half and y <= half:
+				best = t if best < 0.0 else minf(best, t)
 
 	# Caps.
-	var caps: Array[float] = [-half, half]
-	for cap_y in caps:
-		var t := _ray_sphere(from, direction, Vector3(0.0, cap_y, 0.0), radius)
-		if t >= 0.0:
-			best = t if best < 0.0 else minf(best, t)
+	var t_low := _ray_sphere(from, direction, Vector3(0.0, -half, 0.0), radius)
+	if t_low >= 0.0:
+		best = t_low if best < 0.0 else minf(best, t_low)
+	var t_high := _ray_sphere(from, direction, Vector3(0.0, half, 0.0), radius)
+	if t_high >= 0.0:
+		best = t_high if best < 0.0 else minf(best, t_high)
 
 	# Starting inside: distance zero, like the sphere case and for the same reason.
 	if best < 0.0:
