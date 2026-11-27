@@ -43,6 +43,8 @@ var shots: int = 0
 var target_id: int = -1
 
 var _ready_at: float = 0.0
+## The "no decision" / "no candidate" result: shared and read-only (callers only test is_empty()).
+const _NONE := {}
 
 
 func _init(p_position: Vector3 = Vector3.ZERO, p_now: float = 0.0, p_yaw: float = 0.0) -> void:
@@ -66,11 +68,11 @@ func seconds_left(now: float) -> float:
 
 
 ## One decision. [param candidates] are dictionaries `{id: int, at: Vector3}` (the point to hit);
-## [param can_see] is `func(from: Vector3, to: Vector3) -> bool`. Returns `{}` or
+## [param can_see] is `func(from: Vector3, to: Vector3) -> bool`. Returns an empty (read-only) dictionary or
 ## `{"fire": candidate, "from": muzzle, "to": point}`; the sentry has already spent the round.
 func step(delta: float, now: float, candidates: Array, can_see: Callable) -> Dictionary:
 	if expired(now):
-		return {}
+		return _NONE
 
 	var held := _find(candidates, target_id)
 
@@ -79,7 +81,7 @@ func step(delta: float, now: float, candidates: Array, can_see: Callable) -> Dic
 
 	if held.is_empty():
 		target_id = -1
-		return {}
+		return _NONE
 
 	target_id = int(held["id"])
 	var to := (held["at"] as Vector3) - muzzle()
@@ -91,7 +93,7 @@ func step(delta: float, now: float, candidates: Array, can_see: Callable) -> Dic
 	var off := rad_to_deg(maxf(absf(angle_difference(yaw, want_yaw)), absf(want_pitch - pitch)))
 
 	if off > tolerance or now < _ready_at:
-		return {}
+		return _NONE
 
 	_ready_at = now + interval
 	shots += 1
@@ -113,7 +115,7 @@ func _usable(c: Dictionary, can_see: Callable) -> bool:
 
 
 func _pick(candidates: Array, can_see: Callable) -> Dictionary:
-	var best: Dictionary = {}
+	var best: Dictionary = _NONE
 	var best_d := INF
 
 	for c: Dictionary in candidates:
@@ -128,13 +130,13 @@ func _pick(candidates: Array, can_see: Callable) -> Dictionary:
 
 func _find(candidates: Array, id: int) -> Dictionary:
 	if id < 0:
-		return {}
+		return _NONE
 
 	for c: Dictionary in candidates:
 		if int(c["id"]) == id:
 			return c
 
-	return {}
+	return _NONE
 
 
 ## Whether a sentry may stand where [param from] looks along [param dir] up to [param reach]: the

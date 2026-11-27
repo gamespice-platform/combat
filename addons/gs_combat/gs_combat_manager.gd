@@ -31,6 +31,9 @@ const _CVARS_PATH := "res://addons/gs_combat/gs_combat_cvars.gd"
 
 var _tracer: RefCounted = null
 var _cvars: RefCounted = null
+# The trace exclusion lists [method _trace_shot] and [method _apply_splash] refill per shot instead of building new ones.
+var _shot_exclude: Array = []  # perf-lint: allow untyped_array the pellet tracer extends its copy with panes as well as hitbox sets
+var _splash_exclude: Array = []  # perf-lint: allow untyped_array assigned to the untyped GSTrace.exclude
 
 ## Microseconds per part of [method resolve_shot], summed while [member phase_timers] is on (a profiler's switch;
 ## off, each part costs one branch). [member GSTrace.phase_us] splits [code]pellets[/code] further.
@@ -255,9 +258,12 @@ func _trace_shot(shot: GSShot, lap: int = 0) -> int:
 	var type := shot.damage_type if shot.damage_type != null else damage_type(&"")
 
 	var shooter := hitboxes_of(shot.attacker)
-	var excluded: Array = [shooter] if shooter != null else []
+	var excluded := _shot_exclude
+	excluded.clear()
+	if shooter != null:
+		excluded.append(shooter)
 	# Inside the rewind, so "holds the muzzle" uses the positions the rays test against.
-	excluded.append_array(pass_through_sets(shot))
+	_append_pass_through(shot, excluded)
 	trace.exclude = excluded
 	lap = _lap(3, lap)
 
@@ -315,16 +321,21 @@ func _set_of(entity: Node) -> GSHitboxSet:
 ## Public for anything tracing outside [method resolve_shot]: pass the result as [member GSTrace.exclude] alongside the shooter.
 func pass_through_sets(shot: GSShot) -> Array[GSHitboxSet]:
 	var out: Array[GSHitboxSet] = []
+	_append_pass_through(shot, out)
+	return out
 
+
+## [method pass_through_sets] appended to [param out] (the per-shot path fills the reused exclusion list, no new array).
+func _append_pass_through(shot: GSShot, out: Array) -> void:  # perf-lint: allow untyped_array takes the typed public list and the untyped trace exclusion list
 	if shot == null:
-		return out
+		return
 
 	var use_rule := rules != null and rules.pass_through_team_mate_at_muzzle
 	# The broad rule goes to the resolver whatever pass_through_fn says: that callable replaces the muzzle question only.
 	var everywhere := rules != null and rules.pass_through_team_mates and resolver != null
 
 	if not pass_through_fn.is_valid() and not everywhere and (not use_rule or resolver == null):
-		return out
+		return
 
 	var muzzle := shot.origin
 
@@ -356,18 +367,16 @@ func pass_through_sets(shot: GSShot) -> Array[GSHitboxSet]:
 		elif everywhere and not holds:
 			continue
 		elif pass_through_fn.is_valid():
-			passes = bool(pass_through_fn.call(shot, set_node, entity_id))
+			passes = bool(pass_through_fn.call(shot, set_node, entity_id))  # perf-lint: allow dynamic_call the game's pass-through policy, only for a body near the muzzle
 		elif use_rule and resolver != null:
 			passes = resolver.are_team_mates(shot.attacker, entity_id)
 
 		if passes:
 			out.append(set_node)
 			if config != null and config.trace_shots:
-				GSLog.debug(CHANNEL, "shot passes through a team-mate or a body at the muzzle", {
+				GSLog.debug(CHANNEL, "shot passes through a team-mate or a body at the muzzle", {  # perf-lint: allow alloc debug-only, behind config.trace_shots
 					"attacker": shot.attacker, "entity": entity_id,
 				})
-
-	return out
 
 
 # --- Server settings -------------------------------------------------------
@@ -512,9 +521,10 @@ func _apply_splash(shot: GSShot) -> void:
 	var centre: Vector3 = shot.impacts[0]
 	var shooter := hitboxes_of(shot.attacker)
 
-	trace.exclude = [] if shot.splash_hurts_owner else (
-		[shooter] if shooter != null else []
-	)
+	_splash_exclude.clear()
+	if shooter != null and not shot.splash_hurts_owner:
+		_splash_exclude.append(shooter)
+	trace.exclude = _splash_exclude
 
 	var caught := trace.sphere_overlap(centre, shot.splash_radius, _set_list, true)
 
@@ -543,7 +553,7 @@ func _apply_splash(shot: GSShot) -> void:
 
 		shot.damages.append(resolver.resolve(damage))
 
-	trace.exclude = []
+	_splash_exclude.clear()
 
 
 func _apply_damages(shot: GSShot) -> void:

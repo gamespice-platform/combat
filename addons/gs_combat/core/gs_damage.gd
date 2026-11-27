@@ -113,9 +113,10 @@ func scale_by(factor: float, reason: String) -> void:
 
 	amount *= factor
 
-	var trace: Array = context.get("scales", [])
-	trace.append("%s x%.3f" % [reason, factor])
-	context["scales"] = trace
+	# The list is made once per damage, not on every scale (a get with a [] default builds one each call).
+	if not context.has("scales"):
+		context["scales"] = []
+	(context["scales"] as Array).append("%s x%.3f" % [reason, factor])
 
 
 func refuse(reason: String) -> void:
