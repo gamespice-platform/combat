@@ -55,7 +55,31 @@ func _test_manager_hitscan() -> void:
 	_check(miss.damages.is_empty(), "a miss does no damage")
 	_check(miss.impacts.size() == 1, "but still reports where it ended")
 
+	_tracer_seam(manager)
 	_hitscan_never_self(manager)
+
+
+## set_tracer: a game's own pellet walker takes every pellet; something that cannot walk one is refused; null is the stock one back.
+func _tracer_seam(manager: GSCombatManager) -> void:
+	var counting := CountingTracer.new(manager)
+	_check(manager.set_tracer(counting) and manager.get_tracer() == counting, "set_tracer installs a game's pellet walker")
+	var shot := _rifle_shot(1, 110, 5)
+	shot.origin = Vector3(0.0, 1.0, 0.0)
+	shot.direction = Vector3.RIGHT
+	shot.tick = 110
+	shot.scatter()
+	manager.resolve_shot(shot)
+	_check(counting.pellets == shot.pellets.size() and shot.impacts.size() == 1, "every pellet goes through it, with the stock result", "%d of %d" % [counting.pellets, shot.pellets.size()])
+	_check(not manager.set_tracer(RefCounted.new()) and manager.get_tracer() == counting, "an object without trace_pellet is refused and the walker kept")
+	_check(manager.set_tracer(null) and not manager.get_tracer() is CountingTracer, "null puts the stock walker back")
+
+
+class CountingTracer extends GSPelletTracer:
+	var pellets := 0
+
+	func trace_pellet(shot: GSShot, pellet: int, type: GSDamageType, pen: GSPenetration, excluded: Array) -> void:
+		pellets += 1
+		super(shot, pellet, type, pen, excluded)
 
 
 func _hitscan_never_self(manager: GSCombatManager) -> void:

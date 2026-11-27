@@ -47,6 +47,25 @@ func _init() -> void:
 	_cvars = load(_CVARS_PATH).new(self)
 
 
+## The pellet walker every shot uses: a [GSPelletTracer] (or a script extending it, such as a
+## native twin) built with this manager. Null restores the stock tracer. False, and no change,
+## for an object without [code]trace_pellet[/code].
+func set_tracer(tracer: RefCounted) -> bool:
+	if tracer == null:
+		_tracer = load(_TRACER_PATH).new(self)
+		return true
+	if not tracer.has_method(&"trace_pellet"):
+		push_warning("GSCombatManager.set_tracer: %s has no trace_pellet; kept the current tracer" % tracer)
+		return false
+	_tracer = tracer
+	return true
+
+
+## The pellet walker in use (see [method set_tracer]).
+func get_tracer() -> RefCounted:
+	return _tracer
+
+
 func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
